@@ -174,7 +174,9 @@ class HmbColors extends ThemeExtension<HmbColors> {
 
   @override
   HmbColors lerp(ThemeExtension<HmbColors>? other, double t) {
-    if (other is! HmbColors) return this;
+    if (other is! HmbColors) {
+      return this;
+    }
     return HmbColors(
       label: Color.lerp(label, other.label, t)!,
       secondaryLabel: Color.lerp(secondaryLabel, other.secondaryLabel, t)!,

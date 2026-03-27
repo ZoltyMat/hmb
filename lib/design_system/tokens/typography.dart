@@ -160,7 +160,9 @@ class HmbTypography extends ThemeExtension<HmbTypography> {
 
   @override
   HmbTypography lerp(ThemeExtension<HmbTypography>? other, double t) {
-    if (other is! HmbTypography) return this;
+    if (other is! HmbTypography) {
+      return this;
+    }
     return HmbTypography(
       largeTitle: TextStyle.lerp(largeTitle, other.largeTitle, t)!,
       title1: TextStyle.lerp(title1, other.title1, t)!,

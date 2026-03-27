@@ -89,10 +89,12 @@ class HmbTheme extends ThemeExtension<HmbTheme> {
 
   @override
   HmbTheme lerp(ThemeExtension<HmbTheme>? other, double t) {
-    if (other is! HmbTheme) return this;
+    if (other is! HmbTheme) {
+      return this;
+    }
     return HmbTheme(
-      colors: colors.lerp(other.colors, t) as HmbColors,
-      typography: typography.lerp(other.typography, t) as HmbTypography,
+      colors: colors.lerp(other.colors, t),
+      typography: typography.lerp(other.typography, t),
     );
   }
 }
