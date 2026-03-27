@@ -4,7 +4,7 @@ WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 COPY . .
-RUN flutter build web --release --no-wasm
+RUN flutter build web --release --dart2js-optimization O2
 
 # Stage 2: Serve with nginx
 FROM nginx:1-alpine
