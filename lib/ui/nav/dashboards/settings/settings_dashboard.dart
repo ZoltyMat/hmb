@@ -29,6 +29,14 @@ class SettingsDashboardPage extends StatelessWidget {
     title: 'Settings',
     dashlets: [
       DashletCard<void>.route(
+        label: 'Appearance',
+        hint: 'Choose between System, Light, and Dark theme',
+        icon: Icons.palette,
+        value: () => Future.value(const DashletValue(null)),
+        route: '/home/settings/appearance',
+        valueBuilder: (_, _) => const HMBEmpty(),
+      ),
+      DashletCard<void>.route(
         label: 'SMS Templates',
         hint: 'Maintain SMS Templates to speed up sending text messages',
         icon: Icons.message,

@@ -4,7 +4,7 @@
  Note: This software is licensed under the GNU General Public License,
          with the following exceptions:
    • Permitted for internal use within your own business or organization only.
-   • Any external distribution, resale, or incorporation into products 
+   • Any external distribution, resale, or incorporation into products
       for third parties is strictly prohibited.
 
  See the full license on GitHub:
@@ -27,6 +27,7 @@ import 'api/ihserver/booking_request_sync_service.dart';
 import 'api/xero/xero_invoice_payment_sync_service.dart';
 import 'database/management/backup_providers/google_drive/background_backup/photo_sync_service.dart';
 import 'database/management/database_helper.dart';
+import 'design_system/theme.dart';
 import 'ui/nav/dashboards/dashboard.dart';
 import 'ui/nav/nav.g.dart';
 import 'ui/widgets/blocking_ui.dart';
@@ -37,6 +38,7 @@ import 'util/dart/log.dart';
 import 'util/flutter/hmb_theme.dart';
 import 'util/flutter/notifications/local_notifs.dart';
 import 'util/flutter/platform_ex.dart';
+import 'util/flutter/theme_mode_notifier.dart';
 
 //----------------------------------------------------------------------
 
@@ -60,6 +62,8 @@ Future<void> main(List<String> args) async {
     appRunner: () async {
       // ensure Flutter binding in the same zone as runApp
       SentryWidgetsFlutterBinding.ensureInitialized();
+      // Hydrate persisted theme mode before the first frame.
+      await June.getState<ThemeModeNotifier>(ThemeModeNotifier.new).load();
       // grab package info for logging
       final packageInfo = await PackageInfo.fromPlatform();
       Log.i('Package Name: ${packageInfo.packageName}');
@@ -160,83 +164,112 @@ class _HmbAppState extends State<HmbApp> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => ToastificationWrapper(
-    child: MaterialApp.router(
-      // required by [DevicePreview]
-      theme: theme,
-      routerConfig: createGoRouter(_rootNavKey, _bootstrap),
-      builder: (context, mainAppWindow) => DevicePreview.appBuilder(
-        context,
-        DesktopBackGesture(
-          navigatorKey: _rootNavKey,
-          child: Stack(
-            children: [
-              // Added a white border when running on desktop so users can
-              // see the edge of the app.
-              DecoratedBox(
-                position: DecorationPosition.foreground,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: isMobile ? Colors.black : Colors.white,
+  Widget build(BuildContext context) => JuneBuilder(
+    ThemeModeNotifier.new,
+    builder: (_) {
+      final themeNotifier =
+          June.getState<ThemeModeNotifier>(ThemeModeNotifier.new);
+      return ToastificationWrapper(
+        child: MaterialApp.router(
+          theme: _buildLightTheme(),
+          darkTheme: _buildDarkTheme(),
+          themeMode: themeNotifier.mode,
+          routerConfig: createGoRouter(_rootNavKey, _bootstrap),
+          builder: (context, mainAppWindow) => DevicePreview.appBuilder(
+            context,
+            DesktopBackGesture(
+              navigatorKey: _rootNavKey,
+              child: Stack(
+                children: [
+                  // Added a white border when running on desktop so users can
+                  // see the edge of the app.
+                  DecoratedBox(
+                    position: DecorationPosition.foreground,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isMobile ? Colors.black : Colors.white,
+                      ),
+                    ),
+                    child: mainAppWindow ?? const HMBEmpty(),
                   ),
-                ),
-                child: mainAppWindow ?? const HMBEmpty(),
-              ),
 
-              //  an overlay for blocking UI during long operations
-              const BlockingOverlay(),
-            ],
+                  //  an overlay for blocking UI during long operations
+                  const BlockingOverlay(),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
-ThemeData get theme => ThemeData(
-  // swipe to go back on iOS
-  pageTransitionsTheme: const PageTransitionsTheme(
-    builders: {
-      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-      TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-    },
-  ),
-  primaryColor: Colors.deepPurple,
-  brightness: Brightness.dark, // This sets the overall theme brightness to dark
-  scaffoldBackgroundColor: HMBColors.defaultBackground,
-  buttonTheme: const ButtonThemeData(
-    buttonColor: Colors.deepPurple,
-    textTheme: ButtonTextTheme.primary,
-  ),
-  snackBarTheme: SnackBarThemeData(
-    actionTextColor: HMBColors.accent,
-    backgroundColor: Colors.grey.shade800,
-    contentTextStyle: const TextStyle(color: Colors.white),
-  ),
-  timePickerTheme: TimePickerThemeData(
-    confirmButtonStyle: TextButton.styleFrom(foregroundColor: Colors.white),
-    cancelButtonStyle: TextButton.styleFrom(foregroundColor: Colors.white),
-  ),
-  textButtonTheme: TextButtonThemeData(
-    style: TextButton.styleFrom(foregroundColor: Colors.white),
-  ),
-  dialogTheme: const DialogTheme(
-    titleTextStyle: TextStyle(
-      color: Colors.white,
-      fontSize: 20,
-      fontWeight: FontWeight.bold,
+/// Builds the light [ThemeData] by layering legacy overrides on top of the
+/// design-system tokens from [HmbTheme].
+ThemeData _buildLightTheme() {
+  final base = HmbTheme.lightThemeData();
+  return base.copyWith(
+    pageTransitionsTheme: _pageTransitions,
+    snackBarTheme: SnackBarThemeData(
+      actionTextColor: HMBColors.accent,
+      backgroundColor: Colors.grey.shade300,
+      contentTextStyle: const TextStyle(color: Colors.black),
     ),
-    contentTextStyle: TextStyle(color: Colors.white),
-  ).data,
-  colorScheme:
-      ColorScheme.fromSwatch(
-            primarySwatch: Colors.deepPurple,
-            brightness:
-                Brightness.dark, // Add this line to match ThemeData brightness
-          )
-          .copyWith(secondary: HMBColors.accent)
-          .copyWith(surface: HMBColors.defaultBackground),
-  visualDensity: VisualDensity.adaptivePlatformDensity,
+    timePickerTheme: TimePickerThemeData(
+      confirmButtonStyle: TextButton.styleFrom(foregroundColor: Colors.black),
+      cancelButtonStyle: TextButton.styleFrom(foregroundColor: Colors.black),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: Colors.black),
+    ),
+    dialogTheme: const DialogTheme(
+      titleTextStyle: TextStyle(
+        color: Colors.black,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+      contentTextStyle: TextStyle(color: Colors.black),
+    ).data,
+    visualDensity: VisualDensity.adaptivePlatformDensity,
+  );
+}
+
+/// Builds the dark [ThemeData] by layering legacy overrides on top of the
+/// design-system tokens from [HmbTheme].
+ThemeData _buildDarkTheme() {
+  final base = HmbTheme.darkThemeData();
+  return base.copyWith(
+    pageTransitionsTheme: _pageTransitions,
+    snackBarTheme: SnackBarThemeData(
+      actionTextColor: HMBColors.accent,
+      backgroundColor: Colors.grey.shade800,
+      contentTextStyle: const TextStyle(color: Colors.white),
+    ),
+    timePickerTheme: TimePickerThemeData(
+      confirmButtonStyle: TextButton.styleFrom(foregroundColor: Colors.white),
+      cancelButtonStyle: TextButton.styleFrom(foregroundColor: Colors.white),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: Colors.white),
+    ),
+    dialogTheme: const DialogTheme(
+      titleTextStyle: TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+      contentTextStyle: TextStyle(color: Colors.white),
+    ).data,
+    visualDensity: VisualDensity.adaptivePlatformDensity,
+  );
+}
+
+const _pageTransitions = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+    TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+  },
 );
 
 /// this is we we do all the heavy initialisation of the app after
