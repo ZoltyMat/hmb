@@ -18,6 +18,7 @@ import 'package:flutter/material.dart' hide StatefulBuilder;
 import 'package:future_builder_ex/future_builder_ex.dart';
 
 import '../../../dao/dao.dart';
+import '../../../design_system/molecules/skeleton_list_tile.dart';
 import '../../../entity/entity.g.dart';
 import '../../../util/flutter/app_title.dart';
 import '../../../util/flutter/flutter_util.g.dart';
@@ -118,6 +119,10 @@ class EntityListScreenState<T extends Entity<T>>
     with RouteAware {
   BuildActionItems<T>? buildActionItems;
   List<T> entityList = [];
+
+  /// Whether the initial data fetch is still in progress.
+  var _isInitialLoading = true;
+
   String? filterOption;
   late final TextEditingController filterController;
   final _scrollController = ScrollController();
@@ -154,6 +159,7 @@ class EntityListScreenState<T extends Entity<T>>
     if (mounted) {
       setState(() {
         entityList = list;
+        _isInitialLoading = false;
       });
     }
   }
@@ -251,6 +257,11 @@ class EntityListScreenState<T extends Entity<T>>
   }
 
   Widget _buildList() {
+    // Show skeleton placeholders during initial data load.
+    if (_isInitialLoading) {
+      return _buildSkeletonList();
+    }
+
     if (entityList.isEmpty) {
       if (widget.emptyBody != null) {
         return widget.emptyBody!;
@@ -290,13 +301,26 @@ class EntityListScreenState<T extends Entity<T>>
         );
       }
     }
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: entityList.length,
-      itemExtent: widget.cardHeight,
-      itemBuilder: (context, index) => _buildCard(entityList[index]),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: ListView.builder(
+        key: const ValueKey('entity-list'),
+        controller: _scrollController,
+        itemCount: entityList.length,
+        itemExtent: widget.cardHeight,
+        itemBuilder: (context, index) => _buildCard(entityList[index]),
+      ),
     );
   }
+
+  /// Builds a list of 8 skeleton placeholder tiles to show while
+  /// the initial data fetch is in progress.
+  Widget _buildSkeletonList() => ListView.builder(
+    key: const ValueKey('skeleton-list'),
+    itemCount: 8,
+    physics: const NeverScrollableScrollPhysics(),
+    itemBuilder: (context, index) => const SkeletonListTile(),
+  );
 
   Widget _buildEditButton(T entity, BuildContext context) => HMBEditIcon(
     onPressed: () => _edit(entity, context),
