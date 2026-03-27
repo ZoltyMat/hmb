@@ -4,7 +4,7 @@ WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 COPY . .
-RUN flutter build web --release --wasm=false
+RUN flutter build web --release
 
 # Stage 2: Serve with nginx
 FROM nginx:1-alpine

@@ -46,11 +46,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          # Pin to 3.29.x — 3.41+ defaults to Wasm which breaks dart:ffi deps
+          flutter-version: '3.29.3'
           cache: true
       - run: flutter pub get
-      # Disable Wasm (default in Flutter 3.41+) — app has dart:ffi deps
-      - run: flutter build web --release --wasm=false
+      - run: flutter build web --release
       - uses: actions/upload-artifact@v4
         with:
           name: web-build
