@@ -4,7 +4,7 @@
  Note: This software is licensed under the GNU General Public License,
          with the following exceptions:
    • Permitted for internal use within your own business or organization only.
-   • Any external distribution, resale, or incorporation into products 
+   • Any external distribution, resale, or incorporation into products
       for third parties is strictly prohibited.
 
  See the full license on GitHub:
@@ -12,7 +12,6 @@
 */
 
 import 'package:flutter/material.dart';
-import 'package:future_builder_ex/future_builder_ex.dart';
 import 'package:june/june.dart';
 
 import '../../../dao/dao.g.dart';
@@ -41,17 +40,72 @@ class ListTaskCard extends StatefulWidget {
 class _ListTaskCardState extends State<ListTaskCard> {
   late Task activeTask;
 
+  // Loaded async data for full-detail mode
+  TaskAccruedValue? _accruedValue;
+  String? _assignmentSummary;
+  bool _fullDetailsLoaded = false;
+
+  // Loaded async data for summary mode
+  Duration? _totalDuration;
+  int? _photoCount;
+  String? _summaryAssignment;
+  bool _summaryLoaded = false;
+
   @override
   void didUpdateWidget(covariant ListTaskCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    activeTask = widget.task;
+    if (oldWidget.task != widget.task || oldWidget.summary != widget.summary) {
+      activeTask = widget.task;
+      _loadData();
+    }
   }
 
   @override
   void initState() {
     super.initState();
     activeTask = widget.task;
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (widget.summary) {
+      await _loadSummaryData();
+    } else {
+      await _loadFullDetailsData();
+    }
+  }
+
+  Future<void> _loadFullDetailsData() async {
+    final accrued = await DaoTask().getAccruedValueForTask(
+      job: widget.job,
+      task: activeTask,
+      includeBilled: true,
+    );
+    final assignment = await _getAssignmentSummary(activeTask.id);
+
+    if (!mounted) return;
+    setState(() {
+      _accruedValue = accrued;
+      _assignmentSummary = assignment;
+      _fullDetailsLoaded = true;
+    });
+  }
+
+  Future<void> _loadSummaryData() async {
+    final timeEntries = await DaoTimeEntry().getByTask(activeTask.id);
+    final photoCount = await _getPhotoCount(activeTask.id);
+    final assignment = await _getAssignmentSummary(activeTask.id);
+
+    if (!mounted) return;
+    setState(() {
+      _totalDuration = timeEntries.fold<Duration>(
+        Duration.zero,
+        (a, b) => a + b.duration,
+      );
+      _photoCount = photoCount;
+      _summaryAssignment = assignment;
+      _summaryLoaded = true;
+    });
   }
 
   @override
@@ -63,96 +117,79 @@ class _ListTaskCardState extends State<ListTaskCard> {
     }
   }
 
-  Widget _buildFullTaskDetails() => HMBColumn(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(activeTask.status.name),
-      FutureBuilderEx(
-        future: DaoTask().getAccruedValueForTask(
-          job: widget.job,
-          task: activeTask,
-          includeBilled: true,
-        ),
-        builder: (context, taskAccruedValue) {
-          final accrued = taskAccruedValue!;
-          return Padding(
+  Widget _buildFullTaskDetails() {
+    if (!_fullDetailsLoaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return HMBColumn(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(activeTask.status.name),
+        if (_accruedValue != null)
+          Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              'Earned (Hrs|\$): ${accrued.earnedLabourHours.format('0.00')}h'
-              ' | ${accrued.earnedMaterialCharges}',
+              'Earned (Hrs|\$): '
+              '${_accruedValue!.earnedLabourHours.format('0.00')}h'
+              ' | ${_accruedValue!.earnedMaterialCharges}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-          );
-        },
-      ),
-      FutureBuilderEx<String?>(
-        future: _getAssignmentSummary(activeTask.id),
-        builder: (context, assignmentSummary) => assignmentSummary == null
-            ? const SizedBox.shrink()
-            : Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  assignmentSummary,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-      ),
-      HMBStartTimeEntry(
-        key: ValueKey(activeTask),
-        task: activeTask,
-        onTimerChanged: () => setState(() {}),
-        onStart: (job, task) {
-          June.getState(SelectJobStatus.new).jobStatus = job.status;
-          activeTask = task;
-          setState(() {});
-        },
-      ),
-    ],
-  );
-
-  Widget _buildTaskSummary(Task task) => HMBColumn(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(task.status.name),
-      FutureBuilderEx(
-        future: DaoTimeEntry().getByTask(task.id),
-        builder: (context, timeEntries) => Text(
-          formatDuration(
-            timeEntries!.fold<Duration>(
-              Duration.zero,
-              (a, b) => a + b.duration,
+          ),
+        if (_assignmentSummary != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _assignmentSummary!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+        HMBStartTimeEntry(
+          key: ValueKey(activeTask),
+          task: activeTask,
+          onTimerChanged: () => setState(() {}),
+          onStart: (job, task) {
+            June.getState(SelectJobStatus.new).jobStatus = job.status;
+            activeTask = task;
+            _loadFullDetailsData();
+          },
         ),
-      ),
-      FutureBuilderEx<int>(
-        future: _getPhotoCount(task.id),
-        builder: (context, photoCount) => Text('Photos: ${photoCount ?? 0}'),
-      ), // Display photo count
-      FutureBuilderEx<String?>(
-        future: _getAssignmentSummary(task.id),
-        builder: (context, assignmentSummary) => assignmentSummary == null
-            ? const SizedBox.shrink()
-            : Text(
-                assignmentSummary,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-      ),
-      HMBStartTimeEntry(
-        task: task,
-        onStart: (job, task) {
-          June.getState(SelectJobStatus.new).jobStatus = job.status;
-          activeTask = task;
-          setState(() {});
-        },
-      ),
-    ],
-  );
+      ],
+    );
+  }
+
+  Widget _buildTaskSummary(Task task) {
+    if (!_summaryLoaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return HMBColumn(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(task.status.name),
+        Text(formatDuration(_totalDuration ?? Duration.zero)),
+        Text('Photos: ${_photoCount ?? 0}'),
+        if (_summaryAssignment != null)
+          Text(
+            _summaryAssignment!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        HMBStartTimeEntry(
+          task: task,
+          onStart: (job, task) {
+            June.getState(SelectJobStatus.new).jobStatus = job.status;
+            activeTask = task;
+            _loadSummaryData();
+          },
+        ),
+      ],
+    );
+  }
 
   Future<int> _getPhotoCount(int taskId) async =>
       (await DaoPhoto().getByParent(taskId, ParentType.task)).length;
