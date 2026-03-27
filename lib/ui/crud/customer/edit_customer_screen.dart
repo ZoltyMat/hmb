@@ -23,6 +23,7 @@ import '../../../entity/entity.g.dart';
 import '../../../util/dart/money_ex.dart';
 import '../../../util/flutter/platform_ex.dart';
 import '../../dialog/duplicate_name_warning_dialog.dart';
+import '../../widgets/dirty_form_mixin.dart';
 import '../../widgets/fields/hmb_name_field.dart';
 import '../../widgets/fields/hmb_text_area.dart';
 import '../../widgets/fields/hmb_text_field.dart';
@@ -52,6 +53,7 @@ class CustomerEditScreen extends StatefulWidget {
 }
 
 class _CustomerEditScreenState extends DeferredState<CustomerEditScreen>
+    with DirtyFormMixin<CustomerEditScreen>
     implements EntityState<Customer> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
@@ -77,6 +79,12 @@ class _CustomerEditScreenState extends DeferredState<CustomerEditScreen>
     _disbarred = widget.customer?.disbarred ?? false;
     _selectedCustomerType =
         widget.customer?.customerType ?? CustomerType.residential;
+
+    trackControllers([
+      _nameController,
+      _descriptionController,
+      _hourlyRateController,
+    ]);
   }
 
   @override
@@ -98,6 +106,7 @@ class _CustomerEditScreenState extends DeferredState<CustomerEditScreen>
 
   @override
   void dispose() {
+    disposeTrackedControllers();
     _nameController.dispose();
     _descriptionController.dispose();
     _hourlyRateController.dispose();
@@ -109,6 +118,8 @@ class _CustomerEditScreenState extends DeferredState<CustomerEditScreen>
     entityName: 'Customer',
     dao: DaoCustomer(),
     entityState: this,
+    isDirty: () => isDirty,
+    onSaved: markClean,
     crossValidator: _validateDuplicateName,
     editor: (customer, {required isNew}) => DeferredBuilder(
       this,
@@ -142,6 +153,7 @@ class _CustomerEditScreenState extends DeferredState<CustomerEditScreen>
                 labelText: 'Disbarred',
                 initialValue: _disbarred,
                 onChanged: (value) {
+                  markExtraDirty();
                   setState(() => _disbarred = value);
                 },
               ),
@@ -150,6 +162,7 @@ class _CustomerEditScreenState extends DeferredState<CustomerEditScreen>
                 items: (filter) async => CustomerType.values,
                 title: 'Customer Type',
                 onChanged: (newValue) {
+                  markExtraDirty();
                   _selectedCustomerType = newValue!;
                 },
                 format: (item) => item.display,

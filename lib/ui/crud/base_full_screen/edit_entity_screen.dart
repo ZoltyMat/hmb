@@ -18,6 +18,7 @@ import '../../../entity/entity.dart';
 import '../../widgets/hmb_toast.dart';
 import '../../widgets/layout/layout.g.dart';
 import '../../widgets/save_and_close.dart';
+import '../../widgets/unsaved_changes_guard.dart';
 
 abstract class EntityState<E extends Entity<E>> {
   Future<E> forInsert();
@@ -50,6 +51,14 @@ class EntityEditScreen<E extends Entity<E>> extends StatefulWidget {
   final ScrollController? scrollController;
   final Future<bool> Function() crossValidator;
 
+  /// Optional callback returning `true` when the form has unsaved changes.
+  /// When provided, an [UnsavedChangesGuard] prevents accidental
+  /// back-navigation.
+  final bool Function()? isDirty;
+
+  /// Optional callback invoked after a successful save to reset dirty state.
+  final VoidCallback? onSaved;
+
   const EntityEditScreen({
     required this.editor,
     required this.entityName,
@@ -57,6 +66,8 @@ class EntityEditScreen<E extends Entity<E>> extends StatefulWidget {
     required this.dao,
     this.preSave,
     this.scrollController,
+    this.isDirty,
+    this.onSaved,
     CrossValidator<E>? crossValidator,
     super.key,
   }) : crossValidator = crossValidator ?? noOpValidator;
@@ -70,46 +81,54 @@ class EntityEditScreenState<E extends Entity<E>>
   final _formKey = GlobalKey<FormState>();
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(
-        widget.entityState.currentEntity != null
-            ? 'Edit ${widget.entityName}'
-            : 'Add ${widget.entityName}',
-      ),
-    ),
-    body: Padding(
-      padding: const EdgeInsets.all(4),
-      child: Form(
-        key: _formKey,
-        child: HMBColumn(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _commandButtons(context),
-
-            /// Inject the entity-specific editor.
-            Expanded(
-              child: SingleChildScrollView(
-                key: PageStorageKey(
-                  /// the entity id's are not unique across tables
-                  /// so we use the createdDate which is in reality
-                  /// unique in all realworld scenarios.
-                  widget.entityState.currentEntity?.createdDate,
-                ),
-                // controller: widget.scrollController ??
-                //     ScrollController(), // Attach the controller here
-                padding: const EdgeInsets.all(4),
-                child: widget.editor(
-                  widget.entityState.currentEntity,
-                  isNew: isNew,
-                ),
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) {
+    Widget screen = Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.entityState.currentEntity != null
+              ? 'Edit ${widget.entityName}'
+              : 'Add ${widget.entityName}',
         ),
       ),
-    ),
-  );
+      body: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Form(
+          key: _formKey,
+          child: HMBColumn(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _commandButtons(context),
+
+              /// Inject the entity-specific editor.
+              Expanded(
+                child: SingleChildScrollView(
+                  key: PageStorageKey(
+                    /// the entity id's are not unique across tables
+                    /// so we use the createdDate which is in reality
+                    /// unique in all realworld scenarios.
+                    widget.entityState.currentEntity?.createdDate,
+                  ),
+                  // controller: widget.scrollController ??
+                  //     ScrollController(), // Attach the controller here
+                  padding: const EdgeInsets.all(4),
+                  child: widget.editor(
+                    widget.entityState.currentEntity,
+                    isNew: isNew,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (widget.isDirty != null) {
+      screen = UnsavedChangesGuard(isDirty: widget.isDirty!, child: screen);
+    }
+
+    return screen;
+  }
 
   /// Display the Save/Cancel Buttons.
   Widget _commandButtons(BuildContext context) => SaveAndClose(
@@ -141,6 +160,7 @@ class EntityEditScreenState<E extends Entity<E>>
           }
         }
         await saved();
+        widget.onSaved?.call();
 
         if (close && mounted) {
           Navigator.of(context).pop(widget.entityState.currentEntity);

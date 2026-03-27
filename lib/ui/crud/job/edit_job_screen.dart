@@ -28,6 +28,7 @@ import '../../../util/dart/local_date.dart';
 import '../../../util/dart/money_ex.dart';
 import '../../widgets/icons/circle.dart';
 import '../../widgets/layout/layout.g.dart';
+import '../../widgets/dirty_form_mixin.dart';
 import '../../widgets/select/hmb_select_customer.dart';
 import '../../widgets/select/hmb_select_site.dart';
 import '../base_full_screen/edit_entity_screen.dart';
@@ -42,6 +43,7 @@ class JobEditScreen extends StatefulWidget {
 }
 
 class _JobEditScreenState extends DeferredState<JobEditScreen>
+    with DirtyFormMixin<JobEditScreen>
     implements EntityState<Job> {
   late TextEditingController _summaryController;
   late TextEditingController _descriptionController;
@@ -95,6 +97,15 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
     _assumptionFocusNode = FocusNode();
     _hourlyRateFocusNode = FocusNode();
     _bookingFeeFocusNode = FocusNode();
+
+    trackControllers([
+      _summaryController,
+      _descriptionController,
+      _notesController,
+      _assumptionController,
+      _hourlyRateController,
+      _bookingFeeController,
+    ]);
   }
 
   @override
@@ -153,7 +164,8 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
           dao: DaoJob(),
           scrollController: scrollController,
           entityState: this,
-
+          isDirty: () => isDirty,
+          onSaved: markClean,
           editor: (job, {required isNew}) => EditJobCard(
             job: job,
             customer: customer,
@@ -172,6 +184,7 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
             bookingFeeFocusNode: _bookingFeeFocusNode,
             selectedBillingType: _selectedBillingType,
             onBillingTypeChanged: (b) {
+              markExtraDirty();
               setState(() {
                 _selectedBillingType = b;
               });
@@ -284,6 +297,7 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
 
   @override
   void dispose() {
+    disposeTrackedControllers();
     scrollController.dispose();
     _summaryController.dispose();
     _descriptionController.dispose();
