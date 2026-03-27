@@ -49,7 +49,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build web --release
+      # Use --no-wasm because app has dart:ffi deps (sqflite, win32, sqlite3)
+      # that can't compile to Wasm yet
+      - run: flutter build web --release --no-wasm
       - uses: actions/upload-artifact@v4
         with:
           name: web-build
