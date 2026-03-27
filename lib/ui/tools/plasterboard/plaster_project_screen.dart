@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../dao/dao.g.dart';
 import '../../../entity/entity.g.dart';
+import '../../../services/job_service.dart';
 import '../../../util/dart/measurement_type.dart';
 import '../../../util/dart/plaster_geometry.dart';
 import '../../dialog/email_dialog.dart';
@@ -447,7 +448,7 @@ class _PlasterProjectScreenState extends State<PlasterProjectScreen> {
     }
     final recipients = _job == null
         ? <String>[]
-        : await DaoJob().getEmailsByJob(_project.jobId);
+        : await JobService().getEmailsByJob(_project.jobId);
     final preferredRecipient = recipients.isEmpty ? '' : recipients.first;
     if (!mounted) {
       return;

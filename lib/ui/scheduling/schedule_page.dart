@@ -24,6 +24,7 @@ import '../../entity/customer.dart';
 import '../../entity/job.dart';
 import '../../entity/operating_hours.dart';
 import '../../entity/site.dart';
+import '../../services/job_service.dart';
 import '../../util/dart/date_time_ex.dart';
 import '../../util/dart/local_date.dart';
 import '../../util/flutter/app_title.dart';
@@ -70,8 +71,9 @@ class JobAndCustomer {
     final customer = await DaoCustomer().getByJob(job.id);
     final site = await DaoSite().getByJob(job);
 
-    final phoneNo = await DaoJob().getBestPhoneNumber(job);
-    final emailAddress = await DaoJob().getBestEmail(job);
+    final jobService = JobService();
+    final phoneNo = await jobService.getBestPhoneNumber(job);
+    final emailAddress = await jobService.getBestEmail(job);
     return JobAndCustomer(job, customer!, site, phoneNo, emailAddress);
   }
 }

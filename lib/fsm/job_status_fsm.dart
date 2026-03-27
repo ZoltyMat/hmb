@@ -2,6 +2,7 @@ import 'package:fsm2/fsm2.dart';
 
 import '../dao/dao.g.dart';
 import '../entity/entity.g.dart';
+import '../services/job_service.dart';
 import 'job_events.dart';
 import 'job_states.dart';
 
@@ -119,7 +120,7 @@ Future<StateMachine> buildJobMachine(Job job) async {
       ..state<Scheduled>(
         (b) => b
           ..onEnter((_, _) async {
-            await DaoJob().markScheduled(job);
+            await JobService().markScheduled(job);
             await _approveTasks(job);
           })
           ..on<StartWork, InProgress>()
@@ -167,7 +168,7 @@ Future<StateMachine> buildJobMachine(Job job) async {
 }
 
 Future<void> _inProgress(Job job) async {
-  await DaoJob().markActive(job.id);
+  await JobService().markActive(job.id);
   await _updateJobStatus(job, JobStatus.inProgress);
   await _approveTasks(job);
 }

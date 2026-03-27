@@ -18,23 +18,14 @@ import 'package:strings/strings.dart';
 import '../entity/customer.dart';
 import '../entity/job.dart';
 import '../entity/job_status.dart';
-import '../entity/job_status_stage.dart';
 import '../entity/task.dart';
-import '../entity/task_item.dart';
-import '../entity/task_item_type.dart';
+import '../services/job_service.dart';
 import '../util/dart/exceptions.dart';
-import '../util/dart/money_ex.dart';
 import 'dao.dart';
-import 'dao_contact.dart';
-import 'dao_customer.dart';
 import 'dao_invoice.dart';
 import 'dao_quote.dart';
-import 'dao_system.dart';
 import 'dao_task.dart';
-import 'dao_task_item.dart';
-import 'dao_time_entry.dart';
 import 'dao_todo.dart';
-import 'dao_work_assignment_task.dart';
 
 enum JobOrder {
   active('Most Recently Accessed'),
@@ -161,56 +152,20 @@ class DaoJob extends Dao<Job> {
     return getFirstOrNull(data);
   }
 
-  /// Marks the job as 'in progress' if it is
-  /// in a pre-start state.
-  /// Also marks the job as the last active job.
-  Future<Job> markActive(int jobId) async {
-    await markLastActive(jobId);
-    final job = await getById(jobId);
+  /// Use [JobService.markActive] instead.
+  @Deprecated('Use JobService().markActive() instead')
+  Future<Job> markActive(int jobId) =>
+      JobService(daoJob: this).markActive(jobId);
 
-    if (job!.status.stage == JobStatusStage.preStart) {
-      job.status = JobStatus.inProgress;
-      await update(job);
-    }
+  /// Use [JobService.markLastActive] instead.
+  @Deprecated('Use JobService().markLastActive() instead')
+  Future<void> markLastActive(int jobId) =>
+      JobService(daoJob: this).markLastActive(jobId);
 
-    return job;
-  }
-
-  /// Marks the job as the most recently accessed job without changing status.
-  Future<void> markLastActive(int jobId) async {
-    final lastActive = await getLastActiveJob();
-    if (lastActive != null) {
-      if (lastActive.id != jobId) {
-        lastActive.lastActive = false;
-        await update(lastActive);
-      }
-    }
-    final job = await getById(jobId);
-
-    /// even if the job is active we want to update the last
-    /// modified date so it comes up first in the job list.
-    job!.lastActive = true;
-    job.modifiedDate = DateTime.now();
-    await update(job);
-  }
-
-  /// Marks the job as 'in quoting' if it is
-  /// in a [JobStatus.prospecting] state.
-  Future<Job> markQuoting(int jobId) async {
-    final job = await getById(jobId);
-
-    /// even if the job is active we want to update the last
-    /// modified date so it comes up first in the job list.
-    job!.lastActive = true;
-    job.modifiedDate = DateTime.now();
-
-    if (job.status == JobStatus.prospecting) {
-      job.status = JobStatus.quoting;
-    }
-    await update(job);
-
-    return job;
-  }
+  /// Use [JobService.markQuoting] instead.
+  @Deprecated('Use JobService().markQuoting() instead')
+  Future<Job> markQuoting(int jobId) =>
+      JobService(daoJob: this).markQuoting(jobId);
 
   /// search for jobs given a user supplied filter string.
   Future<List<Job>> getByFilter(
@@ -337,24 +292,15 @@ where t.id =?
     );
   }
 
-  Future<void> markAwaitingApproval(Job job) async {
-    final canBeApproved = JobStatus.canBeAwaitingApproved(job);
+  /// Use [JobService.markAwaitingApproval] instead.
+  @Deprecated('Use JobService().markAwaitingApproval() instead')
+  Future<void> markAwaitingApproval(Job job) =>
+      JobService(daoJob: this).markAwaitingApproval(job);
 
-    if (canBeApproved) {
-      job.status = JobStatus.awaitingApproval;
-      await DaoJob().update(job);
-    }
-  }
-
-  /// Mark the job as scheduled if it is in a pre-start state.
-  Future<void> markScheduled(Job job) async {
-    final jobStatus = job.status;
-
-    if (jobStatus.stage == JobStatusStage.preStart) {
-      job.status = JobStatus.scheduled;
-      await DaoJob().update(job);
-    }
-  }
+  /// Use [JobService.markScheduled] instead.
+  @Deprecated('Use JobService().markScheduled() instead')
+  Future<void> markScheduled(Job job) =>
+      JobService(daoJob: this).markScheduled(job);
 
   /// Get Quotable Jobs - now filtered by `preStart` status
   Future<List<Job>> getQuotableJobs(String? filter) async {
@@ -397,101 +343,15 @@ where t.id =?
     );
   }
 
-  Future<JobStatistics> getJobStatistics(Job job) async {
-    final tasks = await DaoTask().getTasksByJob(job.id);
+  /// Use [JobService.getJobStatistics] instead.
+  @Deprecated('Use JobService().getJobStatistics() instead')
+  Future<JobStatistics> getJobStatistics(Job job) =>
+      JobService(daoJob: this).getJobStatistics(job);
 
-    final hourlyRate = await DaoJob().getHourlyRate(job.id);
-
-    final totalTasks = tasks.length;
-    var completedTasks = 0;
-    var expectedLabourHours = Fixed.zero;
-    var completedLabourHours = Fixed.zero;
-    var totalMaterialCost = MoneyEx.zero;
-    var completedMaterialCost = MoneyEx.zero;
-    var workedHours = Fixed.fromNum(0, decimalDigits: 2);
-
-    for (final task in tasks) {
-      // Fetch task status to check if it's completed
-      final status = task.status;
-
-      // Fetch checklist items related to the task
-      final taskItems = await DaoTaskItem().getByTask(task.id);
-
-      // Calculate effort and cost from checklist items
-      for (final item in taskItems) {
-        var hours = Fixed.zero;
-        var materialCost = MoneyEx.zero;
-        switch (item.itemType) {
-          case TaskItemType.materialsBuy:
-          case TaskItemType.materialsStock:
-          case TaskItemType.consumablesStock:
-          case TaskItemType.consumablesBuy:
-            materialCost = item.estimatedMaterialUnitCost!.multiplyByFixed(
-              item.estimatedMaterialQuantity!,
-            );
-
-          case TaskItemType.toolsBuy:
-          case TaskItemType.toolsOwn:
-            materialCost = MoneyEx.zero;
-          case TaskItemType.labour:
-            switch (item.labourEntryMode) {
-              case LabourEntryMode.hours:
-                hours = item.estimatedLabourHours!;
-              case LabourEntryMode.dollars:
-                hours = Fixed.fromNum(
-                  item.estimatedLabourCost!.dividedBy(hourlyRate),
-                );
-            }
-        }
-
-        expectedLabourHours += hours;
-        totalMaterialCost += materialCost;
-
-        // If the task is completed, add to completed effort and earned cost
-        if ((status.isComplete()) || item.completed) {
-          completedLabourHours += hours;
-          completedMaterialCost += materialCost;
-        }
-      }
-
-      if (status.isComplete()) {
-        completedTasks++;
-      }
-
-      // Calculate worked hours from time entries
-      final timeEntries = await DaoTimeEntry().getByTask(task.id);
-      for (final timeEntry in timeEntries) {
-        workedHours += Fixed.fromInt(
-          (timeEntry.duration.inMinutes / 60.0 * 100).toInt(),
-        );
-      }
-    }
-
-    return JobStatistics(
-      totalTasks: totalTasks,
-      completedTasks: completedTasks,
-      expectedLabourHours: expectedLabourHours,
-      completedLabourHours: completedLabourHours,
-      totalMaterialCost: totalMaterialCost,
-      completedMaterialCost: completedMaterialCost,
-      workedHours: workedHours,
-      worked: job.hourlyRate!.multiplyByFixed(workedHours),
-    );
-  }
-
-  Future<Money> getBookingFee(Job job) async {
-    if (job.bookingFee != null) {
-      return job.bookingFee!;
-    }
-
-    final system = await DaoSystem().get();
-
-    if (system.defaultBookingFee != null) {
-      return system.defaultBookingFee!;
-    }
-
-    return MoneyEx.zero;
-  }
+  /// Use [JobService.getBookingFee] instead.
+  @Deprecated('Use JobService().getBookingFee() instead')
+  Future<Money> getBookingFee(Job job) =>
+      JobService(daoJob: this).getBookingFee(job);
 
   /// Get all the jobs for the given customer.
   Future<List<Job>> getByCustomer(Customer? customer) async {
@@ -531,233 +391,81 @@ where q.id=?
     );
   }
 
-  Future<bool> hasBillableTasks(Job job) async {
-    final tasksAccruedValue = await DaoTask().getAccruedValueForJob(
-      job: job,
-      includedBilled: false,
-    );
+  /// Use [JobService.hasBillableTasks] instead.
+  @Deprecated('Use JobService().hasBillableTasks() instead')
+  Future<bool> hasBillableTasks(Job job) =>
+      JobService(daoJob: this).hasBillableTasks(job);
 
-    for (final task in tasksAccruedValue) {
-      if ((await task.earned) > MoneyEx.zero) {
-        return true;
-      }
-    }
+  /// Use [JobService.getBestPhoneNumber] instead.
+  @Deprecated('Use JobService().getBestPhoneNumber() instead')
+  Future<String?> getBestPhoneNumber(Job job) =>
+      JobService(daoJob: this).getBestPhoneNumber(job);
 
-    return false;
-  }
+  /// Use [JobService.getBestEmail] instead.
+  @Deprecated('Use JobService().getBestEmail() instead')
+  Future<String?> getBestEmail(Job job) =>
+      JobService(daoJob: this).getBestEmail(job);
 
-  Future<String?> getBestPhoneNumber(Job job) async {
-    String? bestPhone;
-    if (job.contactId != null) {
-      bestPhone = (await DaoContact().getPrimaryForJob(job.id))?.bestPhone;
-    }
+  /// Use [JobService.getEmailsByJob] instead.
+  @Deprecated('Use JobService().getEmailsByJob() instead')
+  Future<List<String>> getEmailsByJob(int jobId) =>
+      JobService(daoJob: this).getEmailsByJob(jobId);
 
-    if (bestPhone == null) {
-      final customer = await DaoCustomer().getByJob(job.id);
-      bestPhone = (await DaoContact().getPrimaryForCustomer(
-        customer!.id,
-      ))?.bestPhone;
-    }
-    return bestPhone;
-  }
+  /// Use [JobService.hasQuoteableItems] instead.
+  @Deprecated('Use JobService().hasQuoteableItems() instead')
+  Future<bool> hasQuoteableItems(Job job) =>
+      JobService(daoJob: this).hasQuoteableItems(job);
 
-  Future<String?> getBestEmail(Job job) async {
-    String? bestEmail;
-    if (job.contactId != null) {
-      bestEmail = (await DaoContact().getPrimaryForJob(job.id))?.bestEmail;
-    }
+  /// Use [JobService.getHourlyRate] instead.
+  @Deprecated('Use JobService().getHourlyRate() instead')
+  Future<Money> getHourlyRate(int jobId) =>
+      JobService(daoJob: this).getHourlyRate(jobId);
 
-    if (bestEmail == null) {
-      final customer = await DaoCustomer().getByJob(job.id);
-      bestEmail = (await DaoContact().getPrimaryForCustomer(
-        customer!.id,
-      ))?.bestEmail;
-    }
-    return bestEmail;
-  }
+  /// Use [JobService.getFixedPriceTotal] instead.
+  @Deprecated('Use JobService().getFixedPriceTotal() instead')
+  Future<Money> getFixedPriceTotal(Job job) =>
+      JobService(daoJob: this).getFixedPriceTotal(job);
 
-  Future<List<String>> getEmailsByJob(int jobId) async {
-    final job = await DaoJob().getById(jobId);
-    final customer = await DaoCustomer().getById(job!.customerId);
-    final contacts = await DaoContact().getByCustomer(customer!.id);
+  /// Use [JobService.hasBillableBookingFee] instead.
+  @Deprecated('Use JobService().hasBillableBookingFee() instead')
+  Future<bool> hasBillableBookingFee(Job job) =>
+      JobService(daoJob: this).hasBillableBookingFee(job);
 
-    /// make sure we have no dups.
-    final emails = <String>{};
+  /// Use [JobService.markBookingFeeNotBilled] instead.
+  @Deprecated('Use JobService().markBookingFeeNotBilled() instead')
+  Future<void> markBookingFeeNotBilled(Job job) =>
+      JobService(daoJob: this).markBookingFeeNotBilled(job);
 
-    for (final contact in contacts) {
-      if (Strings.isNotBlank(contact.emailAddress)) {
-        emails.add(contact.emailAddress.trim());
-      }
-      if (Strings.isNotBlank(contact.alternateEmail)) {
-        emails.add(contact.alternateEmail!.trim());
-      }
-    }
+  /// Use [JobService.getJobForInvoice] instead.
+  @Deprecated('Use JobService().getJobForInvoice() instead')
+  Future<Job> getJobForInvoice(int invoiceId) =>
+      JobService(daoJob: this).getJobForInvoice(invoiceId);
 
-    return emails.toList();
-  }
+  /// Use [JobService.getJobForQuote] instead.
+  @Deprecated('Use JobService().getJobForQuote() instead')
+  Future<Job> getJobForQuote(int quoteId) =>
+      JobService(daoJob: this).getJobForQuote(quoteId);
 
-  Future<bool> hasQuoteableItems(Job job) async {
-    final estimates = await DaoTask().getEstimatesForJob(job);
+  /// Use [JobService.readyToBeInvoiced] instead.
+  @Deprecated('Use JobService().readyToBeInvoiced() instead')
+  Future<List<Job>> readyToBeInvoiced(String? filter) =>
+      JobService(daoJob: this).readyToBeInvoiced(filter);
 
-    return estimates.fold(false, (a, b) async => await a || b.total.isPositive);
-  }
-
-  Future<Money> getHourlyRate(int jobId) async {
-    final job = await getById(jobId);
-
-    return job?.hourlyRate ?? DaoSystem().getHourlyRate();
-  }
-
-  /// Calculates the total quoted price for the job.
-  Future<Money> getFixedPriceTotal(Job job) async {
-    final estimates = await DaoTask().getEstimatesForJob(job);
-
-    var total = MoneyEx.zero;
-    for (final estimate in estimates) {
-      if (estimate.total > MoneyEx.zero) {
-        total += estimate.total;
-      }
-    }
-    return total;
-  }
-
-  /// Must be
-  /// Time and Materials
-  /// Not been invoiced
-  /// Have a non-zero booking fee.
-  Future<bool> hasBillableBookingFee(Job job) async =>
-      job.billingType == BillingType.timeAndMaterial &&
-      !job.bookingFeeInvoiced &&
-      job.bookingFee != null &&
-      (await getBookingFee(job) != MoneyEx.zero);
-
-  Future<void> markBookingFeeNotBilled(Job job) async {
-    job.bookingFeeInvoiced = false;
-
-    await update(job);
-  }
-
-  Future<Job> getJobForInvoice(int invoiceId) async {
-    final invoice = await DaoInvoice().getById(invoiceId);
-    return (await getById(invoice!.jobId))!;
-  }
-
-  Future<Job> getJobForQuote(int quoteId) async {
-    final quote = await DaoQuote().getById(quoteId);
-    return (await getById(quote!.jobId))!;
-  }
-
-  Future<List<Job>> readyToBeInvoiced(String? filter) async {
-    final activeJobs = await DaoJob().getActiveJobs(filter);
-    final ready = <Job>[];
-    for (final job in activeJobs) {
-      if (job.billingType == BillingType.nonBillable) {
-        continue;
-      }
-      final hasBillableTasks = await DaoJob().hasBillableTasks(job);
-      if (hasBillableTasks) {
-        ready.add(job);
-      }
-    }
-    return ready;
-  }
-
-  /// Copy a [Job] and move selected [Task]s to the new [Job]
+  /// Use [JobService.copyJobAndMoveTasks] instead.
+  @Deprecated('Use JobService().copyJobAndMoveTasks() instead')
   Future<Job> copyJobAndMoveTasks({
     required Job job,
     required List<Task> tasksToMove,
     required String summary,
     JobStatus? newJobStatus,
     Transaction? transaction,
-  }) async {
-    final daoTask = DaoTask();
-    final daoTaskItem = DaoTaskItem();
-    final daoTimeEntry = DaoTimeEntry();
-    final daoWAT = DaoWorkAssignmentTask();
-
-    // Validate [Task]s belong to the [Job]
-    for (final task in tasksToMove) {
-      if (task.jobId != job.id) {
-        throw TaskMoveException(
-          'Task ${task.name} does not belong to job ${job.description}.',
-        );
-      }
-    }
-
-    // Preload approved quotes (only if Fixed Price)
-    // Check business rules
-    final nonMovableReasons = <Task, String>{};
-    for (final t in tasksToMove) {
-      final billed = await daoTask.isTaskBilled(
-        task: t,
-        daoTaskItem: daoTaskItem,
-        daoTimeEntry: daoTimeEntry,
-      );
-      if (billed) {
-        nonMovableReasons[t] = 'has billed items or time.';
-        continue;
-      }
-      final hasWA = await daoTask.hasWorkAssignment(task: t, daoWAT: daoWAT);
-      if (hasWA) {
-        nonMovableReasons[t] = 'is linked to a work assignment.';
-        continue;
-      }
-
-      if (await daoTask.isTaskLinkedToQuote(t)) {
-        nonMovableReasons[t] = 'is linked to a quote.';
-        continue;
-      }
-    }
-
-    if (nonMovableReasons.isNotEmpty) {
-      final b = StringBuffer('One or more tasks cannot be moved:\n');
-      nonMovableReasons.forEach((id, why) {
-        b.writeln(' - Task $id: $why');
-      });
-      throw TaskMoveException(b.toString());
-    }
-
-    // Use withinTransaction so everything is atomic
-    return withTransaction((transaction) async {
-      // 1. Insert new job
-      final inserted = Job.forInsert(
-        customerId: job.customerId,
+  }) =>
+      JobService(daoJob: this).copyJobAndMoveTasks(
+        job: job,
+        tasksToMove: tasksToMove,
         summary: summary,
-        description: job.description,
-        assumption: job.assumption,
-        siteId: job.siteId,
-        contactId: job.contactId,
-        status: newJobStatus ?? JobStatus.startingStatus,
-        hourlyRate: job.hourlyRate,
-        bookingFee: job.bookingFee,
-        billingContactId: job.billingContactId,
-        billingType: job.billingType,
-        lastActive: true,
+        newJobStatus: newJobStatus,
       );
-
-      final newJobId = await insert(inserted, transaction);
-      final newJob = (await getById(newJobId, transaction))!;
-
-      // 2. Move tasks by updating jobId
-      for (final t in tasksToMove) {
-        final moved = t.copyWith(
-          jobId: newJobId,
-          name: t.name,
-          description: t.description,
-          assumption: t.assumption,
-          status: t.status,
-        );
-        await daoTask.update(moved, transaction);
-      }
-
-      final srcTouched = job
-        ..modifiedDate = DateTime.now()
-        ..lastActive = false;
-      await update(srcTouched, transaction);
-
-      return newJob;
-    });
-  }
 }
 
 class JobStatistics {

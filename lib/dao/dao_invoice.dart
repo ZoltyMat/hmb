@@ -17,12 +17,12 @@ import 'package:strings/strings.dart';
 
 import '../api/accounting/accounting_adaptor.dart';
 import '../entity/entity.g.dart';
+import '../services/job_service.dart';
 import '../util/dart/exceptions.dart';
 import '../util/dart/money_ex.dart';
 import 'dao.dart';
 import 'dao_invoice_line.dart';
 import 'dao_invoice_line_group.dart';
-import 'dao_job.dart';
 import 'dao_milestone.dart';
 
 class DaoInvoice extends Dao<Invoice> {
@@ -172,7 +172,7 @@ ORDER BY modified_date DESC
   }
 
   Future<List<String>> getEmailsByInvoice(Invoice invoice) =>
-      DaoJob().getEmailsByJob(invoice.jobId);
+      JobService().getEmailsByJob(invoice.jobId);
 
   Future<void> markSent(Invoice invoice) async {
     invoice.sent = true;

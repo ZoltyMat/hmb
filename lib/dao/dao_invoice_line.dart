@@ -14,8 +14,8 @@
 import 'package:sqflite_common/sqlite_api.dart';
 
 import '../entity/invoice_line.dart';
+import '../services/job_service.dart';
 import 'dao.dart';
-import 'dao_job.dart';
 import 'dao_task_item.dart';
 import 'dao_time_entry.dart';
 
@@ -59,8 +59,9 @@ class DaoInvoiceLine extends Dao<InvoiceLine> {
     final lines = await getByInvoiceId(invoiceId);
     for (final line in lines) {
       if (line.fromBookingFee) {
-        final job = await DaoJob().getJobForInvoice(invoiceId);
-        await DaoJob().markBookingFeeNotBilled(job);
+        final jobService = JobService();
+        final job = await jobService.getJobForInvoice(invoiceId);
+        await jobService.markBookingFeeNotBilled(job);
       }
 
       /// try each of the source types and if they

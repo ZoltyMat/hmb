@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../dao/dao.g.dart';
+import '../../../services/job_service.dart';
 import '../../../util/dart/format.dart';
 import '../../crud/job/full_page_list_job_card.dart' show FullPageListJobCard;
 import '../../dialog/source_context.dart';
@@ -93,7 +94,7 @@ class JobCard extends StatelessWidget {
                     jobAndActivity.jobAndCustomer.site,
                     onMapClicked: () async {
                       final job = jobAndActivity.jobAndCustomer.job;
-                      await DaoJob().markActive(job.id);
+                      await JobService().markActive(job.id);
                       await DaoActivity().recordNavigatedToJob(jobId: job.id);
                     },
                   ),

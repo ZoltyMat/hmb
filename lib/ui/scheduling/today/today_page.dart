@@ -21,6 +21,7 @@ import 'package:go_router/go_router.dart';
 // -- Example imports. Adapt for your project:
 import '../../../dao/dao.g.dart';
 import '../../../entity/entity.g.dart';
+import '../../../services/job_service.dart';
 import '../../../util/flutter/flutter_util.g.dart';
 import '../../crud/todo/list_todo_card.dart';
 import '../../invoicing/create_invoice_ui.dart';
@@ -55,8 +56,9 @@ class JobAndCustomer {
     final customer = await DaoCustomer().getByJob(job.id);
     final site = await DaoSite().getByJob(job);
 
-    final phoneNo = await DaoJob().getBestPhoneNumber(job);
-    final emailAddress = await DaoJob().getBestEmail(job);
+    final jobService = JobService();
+    final phoneNo = await jobService.getBestPhoneNumber(job);
+    final emailAddress = await jobService.getBestEmail(job);
     return JobAndCustomer(job, customer!, site, phoneNo, emailAddress);
   }
 }
@@ -124,7 +126,7 @@ class Today {
           );
 
     final toBeQuoted = await daoJob.getQuotableJobs(null);
-    final readyJobs = await daoJob.readyToBeInvoiced(null);
+    final readyJobs = await JobService().readyToBeInvoiced(null);
     final unsentInvoices = await DaoInvoice().getUnsent();
     final byId = <int, InvoicingJob>{};
 

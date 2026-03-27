@@ -18,6 +18,7 @@ import '../../dao/dao_customer.dart';
 import '../../dao/dao_job.dart';
 import '../../entity/customer.dart';
 import '../../entity/job.dart';
+import '../../services/job_service.dart';
 import '../widgets/layout/layout.g.dart';
 import '../widgets/layout/surface.dart';
 
@@ -218,8 +219,9 @@ class CustomerAndJob {
   }
 
   static Future<bool> hasBillableItems(Job job) async {
-    final hasBillableTasks = await DaoJob().hasBillableTasks(job);
-    final hasBillableBookingFee = await DaoJob().hasBillableBookingFee(job);
+    final jobService = JobService();
+    final hasBillableTasks = await jobService.hasBillableTasks(job);
+    final hasBillableBookingFee = await jobService.hasBillableBookingFee(job);
     return hasBillableTasks || hasBillableBookingFee;
   }
 }

@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../dao/dao.g.dart';
 import '../../../../entity/entity.g.dart';
+import '../../../../services/job_service.dart';
 import '../../../../util/flutter/flutter_util.g.dart';
 import '../dashboard.dart';
 import '../dashlet_card.dart';
@@ -75,12 +76,13 @@ class AccountingDashboardPage extends StatelessWidget {
   }
 
   Future<DashletValue<int>> getYetToBeInvoiced() async {
-    final jobs = await DaoJob().readyToBeInvoiced(null);
+    final jobService = JobService();
+    final jobs = await jobService.readyToBeInvoiced(null);
     final count = jobs.length;
     var total = MoneyEx.zero;
     for (final job in jobs) {
       final hourlyRate = job.hourlyRate;
-      final statistics = await DaoJob().getJobStatistics(job);
+      final statistics = await jobService.getJobStatistics(job);
       total +=
           statistics.completedMaterialCost +
           (hourlyRate!.multiplyByFixed(statistics.workedHours));

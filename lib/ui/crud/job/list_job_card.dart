@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import '../../../dao/dao.g.dart';
 import '../../../dao/notification/dao_june_builder.dart';
 import '../../../entity/entity.g.dart';
+import '../../../services/job_service.dart';
 import '../../../util/dart/date_time_ex.dart';
 import '../../../util/dart/format.dart';
 import '../../../util/dart/local_date.dart';
@@ -95,7 +96,7 @@ class _ListJobCardState extends DeferredState<ListJobCard> {
           label: '',
           job: job,
           onMapClicked: () async {
-            await DaoJob().markActive(job.id);
+            await JobService().markActive(job.id);
             await DaoActivity().recordNavigatedToJob(jobId: job.id);
           },
         ),

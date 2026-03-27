@@ -22,6 +22,7 @@ import '../../dao/dao.g.dart';
 import '../../entity/flutter_extensions/job_activity_status_ex.dart';
 import '../../entity/operating_hours.dart';
 import '../../entity/system.dart';
+import '../../services/job_service.dart';
 import '../../util/dart/date_time_ex.dart';
 import '../../util/dart/format.dart';
 import '../../util/dart/local_date.dart';
@@ -394,7 +395,7 @@ class _DayScheduleState extends DeferredState<DaySchedule> {
                   jobAndCustomer.site,
                   onMapClicked: () async {
                     final job = jobAndCustomer.job;
-                    await DaoJob().markActive(job.id);
+                    await JobService().markActive(job.id);
                     await DaoActivity().recordNavigatedToJob(jobId: job.id);
                   },
                 ),

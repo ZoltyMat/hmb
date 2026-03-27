@@ -20,6 +20,7 @@ import '../../../dao/dao_job.dart';
 import '../../../entity/flutter_extensions/job_status_ex.dart';
 import '../../../entity/job.dart';
 import '../../../entity/job_status_stage.dart';
+import '../../../services/job_service.dart';
 import '../../widgets/icons/hmb_copy_icon.dart';
 import '../../widgets/layout/layout.g.dart';
 import '../../widgets/select/select.g.dart';
@@ -258,7 +259,7 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     try {
-      final newJob = await DaoJob().copyJobAndMoveTasks(
+      final newJob = await JobService().copyJobAndMoveTasks(
         job: job,
         tasksToMove: result.selectedTasks,
         summary: result.summary, // <-- pass new description

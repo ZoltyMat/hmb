@@ -16,6 +16,7 @@ import 'package:sqflite_common/sqlite_api.dart';
 import 'package:strings/strings.dart';
 
 import '../entity/entity.g.dart';
+import '../services/job_service.dart';
 import '../ui/invoicing/invoice_options.dart';
 import '../util/dart/exceptions.dart';
 import '../util/dart/money_ex.dart';
@@ -268,7 +269,7 @@ class DaoQuote extends Dao<Quote> {
   }
 
   Future<List<String>> getEmailsByQuote(Quote quote) =>
-      DaoJob().getEmailsByJob(quote.jobId);
+      JobService().getEmailsByJob(quote.jobId);
 
   Future<QuoteLineGroup> _createQuoteLineGroup(
     Task task,
@@ -380,7 +381,7 @@ class DaoQuote extends Dao<Quote> {
     );
 
     final job = await DaoJob().getByQuoteId(quoteId);
-    await DaoJob().markAwaitingApproval(job!);
+    await JobService().markAwaitingApproval(job!);
 
     return quoteId;
   }

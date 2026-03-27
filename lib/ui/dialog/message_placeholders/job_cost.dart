@@ -11,8 +11,8 @@
  https://github.com/bsutton/hmb/blob/main/LICENSE
 */
 
-import '../../../dao/dao_job.dart';
 import '../../../entity/job.dart';
+import '../../../services/job_service.dart';
 import 'job_source.dart';
 import 'place_holder.dart';
 
@@ -30,7 +30,7 @@ class JobCost extends PlaceHolder<Job> {
   Future<String> value() async {
     final job = jobSource.value;
     if (job != null) {
-      return (await DaoJob().getJobStatistics(
+      return (await JobService().getJobStatistics(
         job,
       )).totalMaterialCost.toString();
     } else {
