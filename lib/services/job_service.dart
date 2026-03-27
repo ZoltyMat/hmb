@@ -12,18 +12,23 @@
 */
 
 import 'package:money2/money2.dart';
+import 'package:sqflite_common/sqlite_api.dart';
 import 'package:strings/strings.dart';
 
 import '../dao/dao.g.dart';
 import '../entity/entity.g.dart';
 import '../util/dart/exceptions.dart';
 import '../util/dart/money_ex.dart';
+import 'transaction_mixin.dart';
 
 /// Service layer for Job business logic.
 ///
 /// Extracts status transitions, multi-DAO operations, financial calculations,
 /// and contact lookups out of DaoJob to keep the DAO focused on data access.
-class JobService {
+///
+/// Multi-DAO write operations are wrapped in SQLite transactions via
+/// [TransactionMixin] to prevent partial updates on failure.
+class JobService with TransactionMixin {
   JobService({
     DaoJob? daoJob,
     DaoTask? daoTask,
@@ -45,7 +50,9 @@ class JobService {
         _daoSystem = daoSystem ?? DaoSystem(),
         _daoInvoice = daoInvoice ?? DaoInvoice(),
         _daoWorkAssignmentTask =
-            daoWorkAssignmentTask ?? DaoWorkAssignmentTask();
+            daoWorkAssignmentTask ?? DaoWorkAssignmentTask() {
+    transactionDao = _daoJob;
+  }
 
   final DaoJob _daoJob;
   final DaoTask _daoTask;
@@ -64,34 +71,46 @@ class JobService {
 
   /// Marks the job as 'in progress' if it is in a pre-start state.
   /// Also marks the job as the last active job.
-  Future<Job> markActive(int jobId) async {
-    await markLastActive(jobId);
-    final job = await _daoJob.getById(jobId);
+  ///
+  /// Wrapped in a transaction because it updates the previous last-active job,
+  /// sets the current job as last-active, and may change the job status —
+  /// up to three writes that must succeed or fail together.
+  Future<Job> markActive(int jobId) => withTransaction((txn) async {
+        await _markLastActiveInTxn(jobId, txn);
+        final job = (await _daoJob.getById(jobId, txn))!;
 
-    if (job!.status.stage == JobStatusStage.preStart) {
-      job.status = JobStatus.inProgress;
-      await _daoJob.update(job);
-    }
+        if (job.status.stage == JobStatusStage.preStart) {
+          job.status = JobStatus.inProgress;
+          await _daoJob.update(job, txn);
+        }
 
-    return job;
-  }
+        return job;
+      });
 
   /// Marks the job as the most recently accessed job without changing status.
-  Future<void> markLastActive(int jobId) async {
+  ///
+  /// Wrapped in a transaction because it updates both the previous last-active
+  /// job and the new one — two writes that must be atomic.
+  Future<void> markLastActive(int jobId) =>
+      withTransaction((txn) => _markLastActiveInTxn(jobId, txn));
+
+  /// Inner implementation of markLastActive that accepts a transaction,
+  /// allowing it to be composed into larger transactional operations.
+  Future<void> _markLastActiveInTxn(int jobId, Transaction txn) async {
     final lastActive = await _daoJob.getLastActiveJob();
     if (lastActive != null) {
       if (lastActive.id != jobId) {
         lastActive.lastActive = false;
-        await _daoJob.update(lastActive);
+        await _daoJob.update(lastActive, txn);
       }
     }
-    final job = await _daoJob.getById(jobId);
+    final job = (await _daoJob.getById(jobId, txn))!;
 
     /// even if the job is active we want to update the last
     /// modified date so it comes up first in the job list.
-    job!.lastActive = true;
+    job.lastActive = true;
     job.modifiedDate = DateTime.now();
-    await _daoJob.update(job);
+    await _daoJob.update(job, txn);
   }
 
   /// Marks the job as 'in quoting' if it is
@@ -425,7 +444,7 @@ class JobService {
     }
 
     // Use withTransaction so everything is atomic
-    return _daoJob.withTransaction((transaction) async {
+    return withTransaction((transaction) async {
       // 1. Insert new job
       final inserted = Job.forInsert(
         customerId: job.customerId,
