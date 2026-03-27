@@ -82,11 +82,16 @@ class HMBTextField extends StatelessWidget {
             textCapitalization: textCapitalization,
             inputFormatters: inputFormatters,
             maxLength: maxLength,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             onChanged: onChanged?.call,
             decoration: InputDecoration(
               labelText: labelText,
               border: const OutlineInputBorder(),
               suffixIcon: suffixIcon,
+              errorStyle: const TextStyle(
+                color: Color(0xFFFF3B30), // systemRed
+                fontSize: 13,
+              ),
             ),
             validator: (value) {
               if (required && enabled && Strings.isBlank(value)) {

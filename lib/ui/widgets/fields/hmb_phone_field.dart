@@ -31,6 +31,9 @@ class HMBPhoneField extends StatelessWidget {
     super.key,
   });
 
+  /// Matches digits, spaces, +, -, parentheses, and periods only.
+  static final _phoneCharPattern = RegExp(r'^[0-9\s+\-().]*$');
+
   @override
   Widget build(BuildContext context) => HMBTextField(
     controller: controller,
@@ -38,7 +41,19 @@ class HMBPhoneField extends StatelessWidget {
     maxLength: 20,
     labelText: labelText,
     suffixIcon: HMBPhoneIcon(controller.text, sourceContext: sourceContext),
-    validator: validator,
+    validator: (value) {
+      if (value != null && value.isNotEmpty) {
+        if (!_phoneCharPattern.hasMatch(value)) {
+          return 'Phone may only contain digits, spaces, +, -, and ()';
+        }
+        // Require at least 3 digits for a meaningful phone number
+        final digitCount = value.replaceAll(RegExp('[^0-9]'), '').length;
+        if (digitCount < 3) {
+          return 'Please enter a valid phone number';
+        }
+      }
+      return validator?.call(value);
+    },
     onPaste: parsePhone,
   );
 }
