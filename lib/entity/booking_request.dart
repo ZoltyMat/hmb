@@ -139,6 +139,7 @@ class BookingRequest extends Entity<BookingRequest> {
   );
 
   BookingRequestPayload get parsedPayload => BookingRequestPayload(
+    id: remoteId,
     name: name.trim(),
     businessName: businessName.trim(),
     firstName: firstName.trim(),
