@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'tokens/colors.dart';
@@ -58,6 +59,40 @@ class HmbTheme extends ThemeExtension<HmbTheme> {
         hmbTheme: dark,
       );
 
+  /// Builds a [CupertinoThemeData] from the design-system color tokens so
+  /// that any Cupertino widget (e.g. CupertinoNavigationBar, CupertinoSwitch)
+  /// picks up the correct palette without a separate theme tree.
+  static CupertinoThemeData cupertinoThemeData({
+    required Brightness brightness,
+    HmbColors? colors,
+  }) {
+    final c = colors ??
+        (brightness == Brightness.light ? HmbColors.light : HmbColors.dark);
+    return CupertinoThemeData(
+      brightness: brightness,
+      primaryColor: c.tint,
+      primaryContrastingColor: brightness == Brightness.light
+          ? const Color(0xFFFFFFFF)
+          : const Color(0xFF000000),
+      scaffoldBackgroundColor: c.groupedBackground,
+      barBackgroundColor: c.secondarySystemBackground.withAlpha(230),
+      textTheme: CupertinoTextThemeData(
+        primaryColor: c.tint,
+        textStyle: TextStyle(color: c.label),
+        navTitleTextStyle: TextStyle(
+          color: c.label,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
+        navLargeTitleTextStyle: TextStyle(
+          color: c.label,
+          fontSize: 34,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
   static ThemeData _buildThemeData({
     required Brightness brightness,
     required HmbTheme hmbTheme,
@@ -69,6 +104,10 @@ class HmbTheme extends ThemeExtension<HmbTheme> {
       brightness: brightness,
       colorSchemeSeed: colors.tint,
       scaffoldBackgroundColor: colors.groupedBackground,
+      cupertinoOverrideTheme: cupertinoThemeData(
+        brightness: brightness,
+        colors: colors,
+      ),
       extensions: <ThemeExtension>[
         hmbTheme,
         colors,
