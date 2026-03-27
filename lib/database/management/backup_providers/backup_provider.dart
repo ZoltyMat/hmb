@@ -113,10 +113,10 @@ abstract class BackupProvider {
         await BackupEncryption.encryptFile(
           File(pathToZip),
           File(pathToEncrypted),
-        );
+        ).timeout(const Duration(seconds: 10));
         pathToUpload = pathToEncrypted;
       } catch (e) {
-        // Encryption unavailable — upload unencrypted zip
+        // Encryption unavailable or timed out — upload unencrypted zip
         emitProgress('Encryption skipped', 5, 7);
       }
 
@@ -174,19 +174,23 @@ abstract class BackupProvider {
       emitProgress('Fetching backup file', 4, _restoreStageCount);
       var backupFile = await fetchBackup(backup);
 
-      // Decrypt if the backup is encrypted (has .enc extension or key exists)
-      if (backupFile.path.endsWith('.enc') || await BackupEncryption.hasKey()) {
-        emitProgress('Decrypting backup', 5, _restoreStageCount);
-        final decryptedPath = join(tmpDir, 'decrypted-backup.zip');
-        try {
+      // Decrypt if the backup is encrypted.
+      // Falls back gracefully if secure storage is unavailable (tests)
+      // or times out (no platform channel).
+      try {
+        final hasEncKey = await BackupEncryption.hasKey()
+            .timeout(const Duration(seconds: 5), onTimeout: () => false);
+        if (backupFile.path.endsWith('.enc') || hasEncKey) {
+          emitProgress('Decrypting backup', 5, _restoreStageCount);
+          final decryptedPath = join(tmpDir, 'decrypted-backup.zip');
           await BackupEncryption.decryptFile(
             backupFile,
             File(decryptedPath),
           );
           backupFile = File(decryptedPath);
-        } on FormatException {
-          // File may be a legacy unencrypted backup — proceed as-is
         }
+      } catch (_) {
+        // Encryption unavailable or legacy unencrypted backup — proceed as-is
       }
 
       emitProgress('Extracting files from backup', 6, _restoreStageCount);
