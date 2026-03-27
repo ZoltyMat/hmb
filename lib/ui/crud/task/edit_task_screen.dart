@@ -115,6 +115,9 @@ class _TaskEditScreenState extends State<TaskEditScreen>
 
   @override
   void dispose() {
+    // Reset global June notifier state to prevent cross-form pollution.
+    June.getState(SelectedTaskStatus.new).taskStatus = null;
+
     _nameController.dispose();
     _descriptionController.dispose();
     _assumptionController.dispose();
