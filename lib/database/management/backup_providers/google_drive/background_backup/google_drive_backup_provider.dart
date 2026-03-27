@@ -205,7 +205,8 @@ Google Drive backup failed${failureMessage == null ? '' : ': $failureMessage'}''
   static Future<void> _performDriveBackup(BackupParams params) async {
     await Sentry.init((options) {
       options
-        ..dsn = const String.fromEnvironment('SENTRY_DSN', defaultValue: '')
+        // ignore: do_not_use_environment
+        ..dsn = const String.fromEnvironment('SENTRY_DSN')
         ..tracesSampleRate = 1.0;
     });
 

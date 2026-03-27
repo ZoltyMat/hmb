@@ -33,6 +33,7 @@ class HMBTextField extends StatelessWidget {
   final bool enabled;
   final Widget? suffixIcon;
   final List<TextInputFormatter> inputFormatters;
+  final int? maxLength;
 
   /// A customizable text field that supports disabling/enabling input.
   const HMBTextField({
@@ -50,6 +51,7 @@ class HMBTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.suffixIcon,
     this.inputFormatters = const [],
+    this.maxLength,
   });
 
   @override
@@ -79,6 +81,7 @@ class HMBTextField extends StatelessWidget {
             keyboardType: keyboardType,
             textCapitalization: textCapitalization,
             inputFormatters: inputFormatters,
+            maxLength: maxLength,
             onChanged: onChanged?.call,
             decoration: InputDecoration(
               labelText: labelText,
@@ -88,6 +91,11 @@ class HMBTextField extends StatelessWidget {
             validator: (value) {
               if (required && enabled && Strings.isBlank(value)) {
                 return 'Please enter a $labelText';
+              }
+              if (maxLength != null &&
+                  value != null &&
+                  value.length > maxLength!) {
+                return '$labelText must be at most $maxLength characters';
               }
               return validator?.call(value);
             },

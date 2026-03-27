@@ -208,17 +208,17 @@ Every external service has both a self-hosted (k3s) and cloud (AWS) option. **Bu
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1.1 | Encrypt backup zip files before Google Drive upload (AES-256) | HIGH | TODO |
-| 1.2 | Implement PKCE for Xero OAuth flow | MEDIUM | TODO |
-| 1.3 | Implement PKCE for ChatGPT OAuth flow | MEDIUM | TODO |
-| 1.4 | Add OAuth state parameter validation in redirect handlers | MEDIUM | TODO |
-| 1.5 | Add input length validation to all TextFormField widgets | MEDIUM | TODO |
-| 1.6 | Replace `flutter_secure_storage` beta with stable release | LOW | TODO |
-| 1.7 | Extract hardcoded Sentry DSN to runtime config | LOW | TODO |
-| 1.8 | Extract hardcoded Google OAuth client IDs to runtime config | LOW | TODO |
-| 1.9 | Run `flutter pub outdated` and update stale dependencies | LOW | TODO |
-| 1.10 | Review upstream license — verify fork and contribution rights | — | TODO |
-| 1.11 | Run `flutter analyze` — fix all warnings and dead code | — | TODO |
+| 1.1 | Encrypt backup zip files before Google Drive upload (AES-256) | HIGH | DONE |
+| 1.2 | Implement PKCE for Xero OAuth flow | MEDIUM | DONE |
+| 1.3 | Implement PKCE for ChatGPT OAuth flow | MEDIUM | DONE |
+| 1.4 | Add OAuth state parameter validation in redirect handlers | MEDIUM | DONE |
+| 1.5 | Add input length validation to all TextFormField widgets | MEDIUM | DONE |
+| 1.6 | Replace `flutter_secure_storage` beta with stable release | LOW | DONE |
+| 1.7 | Extract hardcoded Sentry DSN to runtime config | LOW | DONE |
+| 1.8 | Extract hardcoded Google OAuth client IDs to runtime config | LOW | DONE |
+| 1.9 | Run `flutter pub outdated` and update stale dependencies | LOW | DONE |
+| 1.10 | Review upstream license — verify fork and contribution rights | — | TODO — GPLv3 + custom restrictions — private use confirmed OK, external distribution unclear |
+| 1.11 | Run `flutter analyze` — fix all warnings and dead code | — | DONE |
 
 **Deliverable**: All HIGH/MEDIUM security issues resolved. Public repo protections complete.
 
@@ -266,13 +266,13 @@ Every external service has both a self-hosted (k3s) and cloud (AWS) option. **Bu
 
 | # | Task | Status |
 |---|------|--------|
-| 3.1 | Fork or vendor `booking_request` and `calendar_view` (onepub.dev deps) | TODO |
-| 3.2 | Verify `flutter build web --release` succeeds cleanly | TODO |
-| 3.3 | Create Dockerfile (multi-stage: Flutter build → nginx serve with /healthz) | TODO |
-| 3.4 | Build amd64 Docker image (`--provenance=false`) and push to Harbor | TODO |
-| 3.5 | Create GitHub Actions CI workflow (test, analyze, format, build) | TODO |
-| 3.6 | Create k8s manifests (Namespace, Deployment, Service, Ingress) | TODO |
-| 3.7 | Deploy to `hmb.k3s.internal.strommen.systems` | TODO |
+| 3.1 | Fork or vendor `booking_request` and `calendar_view` (onepub.dev deps) | DONE |
+| 3.2 | Verify `flutter build web --release` succeeds cleanly | DONE |
+| 3.3 | Create Dockerfile (multi-stage: Flutter build → nginx serve with /healthz) | DONE |
+| 3.4 | Build amd64 Docker image (`--provenance=false`) and push to Harbor | DONE |
+| 3.5 | Create GitHub Actions CI workflow (test, analyze, format, build) | DONE |
+| 3.6 | Create k8s manifests (Namespace, Deployment, Service, Ingress) | DONE |
+| 3.7 | Deploy to `hmb.k3s.internal.strommen.systems` | DONE |
 | 3.8 | Add ServiceMonitor for nginx metrics (Prometheus) | TODO |
 | 3.9 | Test SQLite WASM persistence in browser | TODO |
 | 3.10 | Test graceful degradation of mobile-only features (camera, dialer) | TODO |

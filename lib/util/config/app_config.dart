@@ -29,26 +29,21 @@ class AppConfig {
   /// `--dart-define=SENTRY_DSN=...` at build time.
   ///
   /// If not set, Sentry is disabled (empty DSN = no-op).
-  static const sentryDsn = String.fromEnvironment(
-    'SENTRY_DSN',
-    defaultValue: '',
-  );
+  // ignore: do_not_use_environment
+  static const sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
   /// Google OAuth Client ID (mobile, signed by Google Play).
   ///
   /// Set via `--dart-define=GOOGLE_CLIENT_ID=...` at build time.
-  static const googleClientId = String.fromEnvironment(
-    'GOOGLE_CLIENT_ID',
-    defaultValue: '',
-  );
+  // ignore: do_not_use_environment
+  static const googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
 
   /// Google OAuth Server Client ID (for backend verification).
   ///
   /// Set via `--dart-define=GOOGLE_SERVER_CLIENT_ID=...` at build time.
-  static const googleServerClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
-  );
+  static const googleServerClientId =
+      // ignore: do_not_use_environment
+      String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 
   /// Whether Sentry is configured and should be active.
   static bool get isSentryEnabled => sentryDsn.isNotEmpty;
