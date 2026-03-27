@@ -22,6 +22,7 @@ class HMBTextArea extends StatelessWidget {
   final int maxLines;
   final bool leadingSpace;
   final void Function(String?)? onChanged;
+  final int? maxLength;
 
   const HMBTextArea({
     required this.controller,
@@ -30,6 +31,7 @@ class HMBTextArea extends StatelessWidget {
     this.maxLines = 6,
     this.focusNode,
     this.leadingSpace = true,
+    this.maxLength,
     super.key,
   });
 
@@ -39,6 +41,7 @@ class HMBTextArea extends StatelessWidget {
     children: [
       TextFormField(
         maxLines: maxLines,
+        maxLength: maxLength,
         keyboardType: TextInputType.multiline,
         textInputAction: TextInputAction.newline,
         controller: controller,
@@ -48,6 +51,14 @@ class HMBTextArea extends StatelessWidget {
           labelText: labelText,
           border: const OutlineInputBorder(),
         ),
+        validator: maxLength == null
+            ? null
+            : (value) {
+                if (value != null && value.length > maxLength!) {
+                  return '$labelText must be at most $maxLength characters';
+                }
+                return null;
+              },
       ),
     ],
   );

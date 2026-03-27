@@ -43,6 +43,7 @@ class HMBEmailField extends StatelessWidget {
     controller: controller,
     autofocus: isNotMobile,
     inputFormatters: [LowerCaseTextFormatter()], // force lowercase
+    maxLength: 254,
     labelText: labelText,
     suffixIcon: HMBMailToIcon(controller.text),
     onPaste: parseEmail,

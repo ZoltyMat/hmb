@@ -35,7 +35,7 @@ class HMBPhoneField extends StatelessWidget {
   Widget build(BuildContext context) => HMBTextField(
     controller: controller,
     keyboardType: TextInputType.phone,
-
+    maxLength: 20,
     labelText: labelText,
     suffixIcon: HMBPhoneIcon(controller.text, sourceContext: sourceContext),
     validator: validator,

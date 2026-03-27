@@ -137,6 +137,9 @@ class XeroAuth2 {
       ],
     );
 
+    // Capture the state parameter for CSRF validation on callback
+    final expectedState = authorizationUrl.queryParameters['state'];
+
     await redirectHandler.start();
 
     late StreamSubscription<Uri> sub;
@@ -145,6 +148,19 @@ class XeroAuth2 {
         return;
       }
       if (uri.toString().startsWith(redirectUri.toString())) {
+        // Validate OAuth state parameter to prevent CSRF attacks
+        final callbackState = uri.queryParameters['state'];
+        if (expectedState != null && callbackState != expectedState) {
+          log('OAuth state mismatch — possible CSRF. '
+              'Expected: $expectedState, got: $callbackState');
+          unawaited(sub.cancel());
+          unawaited(redirectHandler.stop());
+          loginComplete.completeError(
+            XeroException('OAuth state mismatch — possible CSRF attack'),
+          );
+          return;
+        }
+
         _authorizationResponseHandled = true;
         unawaited(sub.cancel());
         unawaited(redirectHandler.stop());

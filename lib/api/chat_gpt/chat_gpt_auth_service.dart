@@ -86,6 +86,9 @@ class ChatGptAuth {
       scopes: _scopes,
     );
 
+    // Capture the state parameter for CSRF validation on callback
+    final expectedState = authUrl.queryParameters['state'];
+
     // Launch system browser
     if (!await launchUrl(authUrl, mode: LaunchMode.externalApplication)) {
       throw Exception('Could not launch OAuth authorization URL');
@@ -96,6 +99,13 @@ class ChatGptAuth {
       (uri) => uri.toString().startsWith(handler.redirectUri.toString()),
     );
     await handler.stop();
+
+    // Validate OAuth state parameter to prevent CSRF attacks
+    final callbackState = callbackUri.queryParameters['state'];
+    if (expectedState != null && callbackState != expectedState) {
+      throw Exception('OAuth state mismatch — possible CSRF attack. '
+          'Expected: $expectedState, got: $callbackState');
+    }
 
     // Complete the grant and obtain a client
     _client = await _grant!.handleAuthorizationResponse(

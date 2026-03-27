@@ -26,6 +26,7 @@ class HMBNameField extends StatelessWidget {
   final bool leadingSpace;
   final TextInputType keyboardType;
   final void Function(String?)? onChanged;
+  final int? maxLength;
 
   const HMBNameField({
     required this.controller,
@@ -38,6 +39,7 @@ class HMBNameField extends StatelessWidget {
     super.key,
     this.autofocus = false,
     this.leadingSpace = true,
+    this.maxLength,
   });
 
   @override
@@ -50,6 +52,7 @@ class HMBNameField extends StatelessWidget {
         focusNode: focusNode,
         autofocus: autofocus,
         keyboardType: keyboardType,
+        maxLength: maxLength,
         textCapitalization: TextCapitalization.words,
         decoration: InputDecoration(
           labelText: labelText,
@@ -58,6 +61,11 @@ class HMBNameField extends StatelessWidget {
         validator: (value) {
           if (required && (value == null || value.isEmpty)) {
             return 'Please enter a $labelText';
+          }
+          if (maxLength != null &&
+              value != null &&
+              value.length > maxLength!) {
+            return '$labelText must be at most $maxLength characters';
           }
           return validator?.call(value);
         },
