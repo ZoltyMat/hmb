@@ -106,6 +106,9 @@ class _CustomerEditScreenState extends DeferredState<CustomerEditScreen>
 
   @override
   void dispose() {
+    // Reset global June notifier state to prevent cross-form pollution.
+    June.getState(CustomerBillingContact.new).contact = null;
+
     disposeTrackedControllers();
     _nameController.dispose();
     _descriptionController.dispose();

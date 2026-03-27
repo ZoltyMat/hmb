@@ -183,6 +183,12 @@ class _TaskItemEditScreenState extends DeferredState<TaskItemEditScreen>
 
   @override
   void dispose() {
+    // Reset global June notifier state to prevent cross-form pollution.
+    June.getState(SelectedSupplier.new).selected = null;
+    June.getState(SelectedMeasurementType.new).selected = null;
+    June.getState(SelectedUnits.new).selected = null;
+    June.getState(SelectedCheckListItemType.new).selected = null;
+
     _descriptionController.dispose();
     _purposeController.dispose();
     _estimatedMaterialUnitCostController.dispose();

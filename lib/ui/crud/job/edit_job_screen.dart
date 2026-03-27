@@ -297,6 +297,18 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
 
   @override
   void dispose() {
+    // Reset global June notifier state to prevent cross-form pollution.
+    June.getState(SelectedCustomer.new).customerId = null;
+    June.getState(SelectedReferrerCustomer.new).customerId = null;
+    June.getState(SelectJobStatus.new).jobStatus = null;
+    June.getState(SelectedSite.new).siteId = null;
+    June.getState(SelectedContact.new).contactId = null;
+    June.getState(SelectedTenantContact.new).contactId = null;
+    June.getState(SelectedReferrerContact.new).contactId = null;
+    June.getState(SelectedBillingParty.new).billingParty =
+        BillingParty.customer;
+    June.getState(JobBillingContact.new).contactId = null;
+
     disposeTrackedControllers();
     scrollController.dispose();
     _summaryController.dispose();
