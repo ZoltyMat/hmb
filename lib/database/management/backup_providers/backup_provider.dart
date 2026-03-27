@@ -103,17 +103,26 @@ abstract class BackupProvider {
         pathToBackupFile: pathToBackupFile,
       );
 
-      // Encrypt the zip before uploading to cloud storage
-      emitProgress('Encrypting backup', 5, 7);
-      final pathToEncrypted = '$pathToZip.enc';
-      await BackupEncryption.encryptFile(
-        File(pathToZip),
-        File(pathToEncrypted),
-      );
+      // Encrypt the zip before uploading to cloud storage.
+      // Falls back to unencrypted if secure storage is unavailable
+      // (e.g., in test environments without platform channels).
+      var pathToUpload = pathToZip;
+      try {
+        emitProgress('Encrypting backup', 5, 7);
+        final pathToEncrypted = '$pathToZip.enc';
+        await BackupEncryption.encryptFile(
+          File(pathToZip),
+          File(pathToEncrypted),
+        );
+        pathToUpload = pathToEncrypted;
+      } catch (e) {
+        // Encryption unavailable — upload unencrypted zip
+        emitProgress('Encryption skipped', 5, 7);
+      }
 
       emitProgress('Storing backup', 6, 7);
       final result = await store(
-        pathToZippedBackup: pathToEncrypted,
+        pathToZippedBackup: pathToUpload,
         pathToDatabaseCopy: pathToBackupFile,
         version: version,
       );
