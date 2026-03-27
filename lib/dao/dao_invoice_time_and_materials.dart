@@ -14,6 +14,7 @@
 import 'package:money2/money2.dart';
 
 import '../entity/entity.g.dart';
+import '../services/job_service.dart';
 import '../util/dart/exceptions.dart';
 import '../util/dart/format.dart';
 import '../util/dart/local_date.dart';
@@ -47,7 +48,7 @@ Future<Invoice> createTimeAndMaterialsInvoice(
   /// Fixed Price invoices don't have a Booking Fee as it is wrapped
   /// up in the total
   if (job.billingType == BillingType.timeAndMaterial) {
-    final bookingFee = await DaoJob().getBookingFee(job);
+    final bookingFee = await JobService().getBookingFee(job);
 
     if (billBookingFee && bookingFee > MoneyEx.zero) {
       final invoiceLineGroup = InvoiceLineGroup.forInsert(

@@ -3,6 +3,7 @@ import 'package:future_builder_ex/future_builder_ex.dart' show FutureBuilderEx;
 
 import '../../../../dao/dao.g.dart';
 import '../../../../entity/entity.g.dart';
+import '../../../../services/job_service.dart';
 import '../../../widgets/layout/layout.g.dart';
 import '../../../widgets/text/text.g.dart';
 
@@ -15,7 +16,7 @@ class JobStatisticsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FutureBuilderEx<JobStatistics>(
     waitingBuilder: (_) => const SizedBox(height: 97),
-    future: DaoJob().getJobStatistics(job),
+    future: JobService().getJobStatistics(job),
     builder: (ctx, stats) {
       if (stats == null) {
         return const CircularProgressIndicator();

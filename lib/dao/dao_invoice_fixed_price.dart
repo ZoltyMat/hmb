@@ -15,6 +15,7 @@
 import 'package:money2/money2.dart';
 
 import '../entity/entity.g.dart';
+import '../services/job_service.dart';
 import '../util/dart/exceptions.dart';
 import '../util/dart/local_date.dart';
 import '../util/dart/money_ex.dart';
@@ -68,7 +69,7 @@ Future<Invoice> createInvoiceFromMilestone(
   Milestone milestonePayment,
   Contact billingContact,
 ) async {
-  final job = await DaoJob().getJobForQuote(milestonePayment.quoteId);
+  final job = await JobService().getJobForQuote(milestonePayment.quoteId);
 
   final invoice = Invoice.forInsert(
     jobId: job.id,

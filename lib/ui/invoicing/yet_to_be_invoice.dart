@@ -19,6 +19,7 @@ import 'package:future_builder_ex/future_builder_ex.dart';
 
 import '../../../dao/dao.g.dart';
 import '../../entity/entity.g.dart';
+import '../../services/job_service.dart';
 import '../../util/flutter/app_title.dart';
 import '../crud/job/full_page_list_job_card.dart';
 import '../widgets/hmb_link_internal.dart';
@@ -51,7 +52,7 @@ class _YetToBeInvoicedScreenState extends DeferredState<YetToBeInvoicedScreen> {
   }
 
   Future<List<ToBeInvoicedJob>> _fetchReadyJobs([String? filter]) async {
-    final jobs = await DaoJob().readyToBeInvoiced(filter);
+    final jobs = await JobService().readyToBeInvoiced(filter);
     final unsentJobIds = (await DaoInvoice().getUnsent())
         .map((invoice) => invoice.jobId)
         .toSet();
