@@ -15,7 +15,6 @@ import 'dart:async';
 
 import 'package:deferred_state/deferred_state.dart';
 import 'package:flutter/material.dart';
-import 'package:future_builder_ex/future_builder_ex.dart';
 import 'package:go_router/go_router.dart';
 
 // -- Example imports. Adapt for your project:
@@ -328,37 +327,14 @@ class TodayPageState extends DeferredState<TodayPage> {
     list: today.todos,
     onChange: onChange,
     emptyMessage: 'No To Dos.',
-    cardBuilder: (todo) => Column(
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: todo.status == ToDoStatus.done,
-              onChanged: todo.status == ToDoStatus.closed
-                  ? null
-                  : (_) async {
-                      await DaoToDo().toggleDone(todo);
-                      await refresh();
-                      HMBToast.info('Marked ${todo.title} as done');
-                    },
-            ),
-            Expanded(child: HMBTextHeadline2(todo.title)),
-          ],
-        ),
-        if (todo.parentType == ToDoParentType.job)
-          FutureBuilderEx<Customer?>(
-            future: DaoCustomer().getByJob(todo.parentId),
-            builder: (context, customer) => HMBOneOf(
-              condition: customer == null,
-              onTrue: const HMBEmpty(),
-              onFalse: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: HMBTextLine('Customer: ${customer!.name}'),
-              ),
-            ),
-          ),
-        ToDoCard(todo, (todo) => onChange()),
-      ],
+    cardBuilder: (todo) => _ToDoCardWithCustomer(
+      todo: todo,
+      onDone: () async {
+        await DaoToDo().toggleDone(todo);
+        await refresh();
+        HMBToast.info('Marked ${todo.title} as done');
+      },
+      onChange: onChange,
     ),
   );
 
@@ -429,62 +405,189 @@ class ToDoCard extends StatelessWidget {
   );
 }
 
+/// ToDo card that pre-loads the customer name (if parent is a job)
+/// in a single async init instead of a FutureBuilderEx per card.
+class _ToDoCardWithCustomer extends StatefulWidget {
+  final ToDo todo;
+  final VoidCallback onDone;
+  final VoidCallback onChange;
+
+  const _ToDoCardWithCustomer({
+    required this.todo,
+    required this.onDone,
+    required this.onChange,
+  });
+
+  @override
+  State<_ToDoCardWithCustomer> createState() => _ToDoCardWithCustomerState();
+}
+
+class _ToDoCardWithCustomerState extends State<_ToDoCardWithCustomer> {
+  Customer? _customer;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (widget.todo.parentType == ToDoParentType.job) {
+      _customer = await DaoCustomer().getByJob(widget.todo.parentId);
+    }
+    if (!mounted) return;
+    setState(() => _loaded = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      children: [
+        Row(
+          children: [
+            Checkbox(
+              value: widget.todo.status == ToDoStatus.done,
+              onChanged: widget.todo.status == ToDoStatus.closed
+                  ? null
+                  : (_) => widget.onDone(),
+            ),
+            Expanded(child: HMBTextHeadline2(widget.todo.title)),
+          ],
+        ),
+        if (_customer != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: HMBTextLine('Customer: ${_customer!.name}'),
+          ),
+        ToDoCard(widget.todo, (todo) => widget.onChange()),
+      ],
+    );
+  }
+}
+
 // shopping
-class ShoppingCard extends StatelessWidget {
+class ShoppingCard extends StatefulWidget {
   final TaskItem taskItem;
 
   const ShoppingCard(this.taskItem, {super.key});
 
   @override
-  Widget build(BuildContext context) => FutureBuilderEx(
-    future: JobAndTask.fetch(taskItem),
-    builder: (context, jobAndCustomer) => Surface(
+  State<ShoppingCard> createState() => _ShoppingCardState();
+}
+
+class _ShoppingCardState extends State<ShoppingCard> {
+  JobAndTask? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final data = await JobAndTask.fetch(widget.taskItem);
+    if (!mounted) return;
+    setState(() => _data = data);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Surface(
       rounded: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HMBText(jobAndCustomer!.customer.name),
-          HMBText(jobAndCustomer.job.summary),
-          HMBText(jobAndCustomer.task.name),
-          HMBText(taskItem.description),
+          HMBText(_data!.customer.name),
+          HMBText(_data!.job.summary),
+          HMBText(_data!.task.name),
+          HMBText(widget.taskItem.description),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
-class PackingCard extends StatelessWidget {
+class PackingCard extends StatefulWidget {
   final TaskItem taskItem;
 
   const PackingCard(this.taskItem, {super.key});
 
   @override
-  Widget build(BuildContext context) => FutureBuilderEx(
-    future: JobAndTask.fetch(taskItem),
-    builder: (context, jobAndCustomer) => Surface(
+  State<PackingCard> createState() => _PackingCardState();
+}
+
+class _PackingCardState extends State<PackingCard> {
+  JobAndTask? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final data = await JobAndTask.fetch(widget.taskItem);
+    if (!mounted) return;
+    setState(() => _data = data);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Surface(
       rounded: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HMBText(jobAndCustomer!.customer.name),
-          HMBText(jobAndCustomer.job.summary),
-          HMBText(jobAndCustomer.task.name),
-          HMBText(taskItem.description),
+          HMBText(_data!.customer.name),
+          HMBText(_data!.job.summary),
+          HMBText(_data!.task.name),
+          HMBText(widget.taskItem.description),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
-class QuotingCard extends StatelessWidget {
+class QuotingCard extends StatefulWidget {
   final Job job;
 
   const QuotingCard(this.job, {super.key});
 
   @override
-  Widget build(BuildContext context) => FutureBuilderEx(
-    future: JobAndCustomer.fetch(job),
-    builder: (context, jobAndCustomer) => Surface(
+  State<QuotingCard> createState() => _QuotingCardState();
+}
+
+class _QuotingCardState extends State<QuotingCard> {
+  JobAndCustomer? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final data = await JobAndCustomer.fetch(widget.job);
+    if (!mounted) return;
+    setState(() => _data = data);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Surface(
       rounded: true,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -492,25 +595,46 @@ class QuotingCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              HMBText(jobAndCustomer!.job.summary),
-              HMBText(jobAndCustomer.customer.name),
+              HMBText(_data!.job.summary),
+              HMBText(_data!.customer.name),
             ],
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
-class InvoiceCard extends StatelessWidget {
+class InvoiceCard extends StatefulWidget {
   final InvoicingJob invoicingJob;
 
   const InvoiceCard(this.invoicingJob, {super.key});
 
   @override
-  Widget build(BuildContext context) => FutureBuilderEx(
-    future: JobAndCustomer.fetch(invoicingJob.job),
-    builder: (context, jobAndCustomer) => Surface(
+  State<InvoiceCard> createState() => _InvoiceCardState();
+}
+
+class _InvoiceCardState extends State<InvoiceCard> {
+  JobAndCustomer? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final data = await JobAndCustomer.fetch(widget.invoicingJob.job);
+    if (!mounted) return;
+    setState(() => _data = data);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Surface(
       rounded: true,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -518,14 +642,14 @@ class InvoiceCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              HMBText(jobAndCustomer!.job.summary),
-              HMBText(jobAndCustomer.customer.name),
-              if (invoicingJob.needsInvoiceCreation)
+              HMBText(_data!.job.summary),
+              HMBText(_data!.customer.name),
+              if (widget.invoicingJob.needsInvoiceCreation)
                 const Text(
                   'Needs invoice creation',
                   style: TextStyle(color: Colors.orange),
                 ),
-              if (invoicingJob.hasUnsentInvoice)
+              if (widget.invoicingJob.hasUnsentInvoice)
                 const Text(
                   'Unsent invoice',
                   style: TextStyle(color: Colors.orange),
@@ -534,36 +658,39 @@ class InvoiceCard extends StatelessWidget {
           ),
           Row(
             children: [
-              if (invoicingJob.hasUnsentInvoice)
+              if (widget.invoicingJob.hasUnsentInvoice)
                 HMBButton.small(
                   label: 'Open',
                   hint: 'Open invoices and send the outstanding invoice',
                   onPressed: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) =>
-                            InvoiceListScreen(jobRestriction: invoicingJob.job),
+                        builder: (_) => InvoiceListScreen(
+                          jobRestriction: widget.invoicingJob.job,
+                        ),
                       ),
                     );
                   },
                 ),
-              if (invoicingJob.hasUnsentInvoice &&
-                  invoicingJob.needsInvoiceCreation)
+              if (widget.invoicingJob.hasUnsentInvoice &&
+                  widget.invoicingJob.needsInvoiceCreation)
                 const HMBSpacer(width: true),
-              if (invoicingJob.needsInvoiceCreation)
+              if (widget.invoicingJob.needsInvoiceCreation)
                 HMBButton.small(
                   label: 'Add',
                   hint: 'Create a new invoice',
                   onPressed: () async {
-                    await createInvoiceFor(invoicingJob.job, context);
+                    await createInvoiceFor(
+                      widget.invoicingJob.job, context,
+                    );
                   },
                 ),
             ],
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 class Listing<T> extends StatelessWidget {

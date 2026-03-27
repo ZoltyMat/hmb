@@ -110,6 +110,10 @@ class _EditJobCardState extends DeferredState<EditJobCard> {
 
   Job? job;
 
+  // Pre-loaded data (replaces FutureBuilderEx for attachments, parties summary)
+  String _partiesSummary = '';
+  List<JobAttachment> _attachments = [];
+
   @override
   void initState() {
     super.initState();
@@ -121,6 +125,30 @@ class _EditJobCardState extends DeferredState<EditJobCard> {
     if (widget.job != null) {
       await DaoJob().markLastActive(widget.job!.id);
     }
+    await _refreshPreloadedData();
+  }
+
+  /// Load parties summary and attachments in a single async call.
+  Future<void> _refreshPreloadedData() async {
+    final results = await Future.wait([
+      _buildPartiesSummary(),
+      if (job != null) DaoJobAttachment().getByJob(job!.id),
+    ]);
+
+    if (!mounted) return;
+    setState(() {
+      _partiesSummary = results[0] as String;
+      if (job != null && results.length > 1) {
+        _attachments = results[1] as List<JobAttachment>;
+      }
+    });
+  }
+
+  /// Refresh just the parties summary (called when selections change).
+  Future<void> _refreshPartiesSummary() async {
+    final summary = await _buildPartiesSummary();
+    if (!mounted) return;
+    setState(() => _partiesSummary = summary);
   }
 
   @override
@@ -213,25 +241,22 @@ You can set a default booking fee from System | Billing screen''');
 
   // --- Selectors ------------------------------------------------------------
 
-  Widget _buildPartiesSection() => FutureBuilderEx<String>(
-    future: _buildPartiesSummary(),
-    builder: (context, summary) => ExpansionTile(
-      title: const Text('Parties'),
-      subtitle: Text(summary ?? ''),
-      childrenPadding: const EdgeInsets.symmetric(horizontal: 8),
-      children: [
-        _chooseCustomer(),
-        _chooseTenantContact(),
-        _chooseContact(),
-        _chooseBillingParty(),
-        if (June.getState(SelectedBillingParty.new).billingParty ==
-            BillingParty.referrer) ...[
-          _chooseReferrerCustomer(),
-          _chooseReferrerContact(),
-        ],
-        _chooseBillingContact(),
+  Widget _buildPartiesSection() => ExpansionTile(
+    title: const Text('Parties'),
+    subtitle: Text(_partiesSummary),
+    childrenPadding: const EdgeInsets.symmetric(horizontal: 8),
+    children: [
+      _chooseCustomer(),
+      _chooseTenantContact(),
+      _chooseContact(),
+      _chooseBillingParty(),
+      if (June.getState(SelectedBillingParty.new).billingParty ==
+          BillingParty.referrer) ...[
+        _chooseReferrerCustomer(),
+        _chooseReferrerContact(),
       ],
-    ),
+      _chooseBillingContact(),
+    ],
   );
 
   Future<String> _buildPartiesSummary() async {
@@ -378,10 +403,9 @@ You can set a default booking fee from System | Billing screen''');
       }
 
       // Pull the customer's rate into the text field
-      setState(() {
-        widget.hourlyRateController.text =
-            customer?.hourlyRate.amount.toString() ?? '';
-      });
+      widget.hourlyRateController.text =
+          customer?.hourlyRate.amount.toString() ?? '';
+      _refreshPartiesSummary();
     },
   );
 
@@ -401,7 +425,7 @@ You can set a default booking fee from System | Billing screen''');
         June.getState(JobBillingContact.new).contactId =
             customer?.billingContactId;
       }
-      setState(() {});
+      _refreshPartiesSummary();
     },
   );
 
@@ -786,58 +810,56 @@ You can set a default booking fee from System | Billing screen''');
     ],
   );
 
-  Widget _buildAttachments() => FutureBuilderEx<List<JobAttachment>>(
-    future: DaoJobAttachment().getByJob(job!.id),
-    builder: (context, attachments) => HMBColumn(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const HMBText('Attachments:', bold: true),
-            HMBButton.small(
-              label: 'Add File',
-              hint: 'Attach an existing file to this job.',
-              onPressed: () async {
-                await _pickAndAttachFile();
-              },
-            ),
-          ],
-        ),
-        if (attachments == null || attachments.isEmpty)
-          const Text('No attachments')
-        else
-          ...attachments.map(
-            (attachment) => Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    attachment.displayName,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                HMBButton.small(
-                  label: 'Open',
-                  hint: 'Open this attachment in an external app.',
-                  onPressed: () async {
-                    await _openAttachment(attachment);
-                  },
-                ),
-                HMBButton.small(
-                  label: 'Remove',
-                  hint: 'Remove this attachment from the job.',
-                  onPressed: () async {
-                    await DaoJobAttachment().delete(attachment.id);
-                    if (mounted) {
-                      setState(() {});
-                    }
-                  },
-                ),
-              ],
-            ),
+  Widget _buildAttachments() => HMBColumn(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const HMBText('Attachments:', bold: true),
+          HMBButton.small(
+            label: 'Add File',
+            hint: 'Attach an existing file to this job.',
+            onPressed: () async {
+              await _pickAndAttachFile();
+            },
           ),
-      ],
-    ),
+        ],
+      ),
+      if (_attachments.isEmpty)
+        const Text('No attachments')
+      else
+        ..._attachments.map(
+          (attachment) => Row(
+            children: [
+              Expanded(
+                child: Text(
+                  attachment.displayName,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              HMBButton.small(
+                label: 'Open',
+                hint: 'Open this attachment in an external app.',
+                onPressed: () async {
+                  await _openAttachment(attachment);
+                },
+              ),
+              HMBButton.small(
+                label: 'Remove',
+                hint: 'Remove this attachment from the job.',
+                onPressed: () async {
+                  await DaoJobAttachment().delete(attachment.id);
+                  _attachments = await DaoJobAttachment().getByJob(job!.id);
+                  if (mounted) {
+                    setState(() {});
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+    ],
   );
 
   Future<void> _pickAndAttachFile() async {
@@ -865,6 +887,7 @@ You can set a default booking fee from System | Billing screen''');
 
     await DaoJobAttachment().insert(attachment);
     if (mounted) {
+      _attachments = await DaoJobAttachment().getByJob(job!.id);
       setState(() {});
     }
   }
