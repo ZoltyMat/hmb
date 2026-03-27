@@ -54,9 +54,14 @@ class HMBNameField extends StatelessWidget {
         keyboardType: keyboardType,
         maxLength: maxLength,
         textCapitalization: TextCapitalization.words,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         decoration: InputDecoration(
           labelText: labelText,
           border: const OutlineInputBorder(),
+          errorStyle: const TextStyle(
+            color: Color(0xFFFF3B30), // systemRed
+            fontSize: 13,
+          ),
         ),
         validator: (value) {
           if (required && (value == null || value.isEmpty)) {

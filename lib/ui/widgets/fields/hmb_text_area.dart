@@ -46,10 +46,15 @@ class HMBTextArea extends StatelessWidget {
         textInputAction: TextInputAction.newline,
         controller: controller,
         focusNode: focusNode,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         onChanged: onChanged?.call,
         decoration: InputDecoration(
           labelText: labelText,
           border: const OutlineInputBorder(),
+          errorStyle: const TextStyle(
+            color: Color(0xFFFF3B30), // systemRed
+            fontSize: 13,
+          ),
         ),
         validator: maxLength == null
             ? null
