@@ -4,7 +4,7 @@
  Note: This software is licensed under the GNU General Public License,
          with the following exceptions:
    • Permitted for internal use within your own business or organization only.
-   • Any external distribution, resale, or incorporation into products 
+   • Any external distribution, resale, or incorporation into products
       for third parties is strictly prohibited.
 
  See the full license on GitHub:
@@ -61,6 +61,9 @@ class EntityListScreen<T extends Entity<T>> extends StatefulWidget {
   final VoidCallback? onFilterSheetClosed;
   final BoolCallback? isFilterActive;
 
+  /// Number of items to display per page. Set to 0 to disable pagination.
+  final int pageSize;
+
   /// show the back arrow at the top of the screen.
   /// Used when the EntityList is shown from mini-dashboard
   /// to make back navigation clear.
@@ -106,6 +109,7 @@ class EntityListScreen<T extends Entity<T>> extends StatefulWidget {
     this.showBackButton = false,
     this.buildActionItems,
     this.emptyBody,
+    this.pageSize = 50,
   }) {
     _fetchList = fetchList ?? (_) => dao.getAll();
   }
@@ -118,16 +122,29 @@ class EntityListScreenState<T extends Entity<T>>
     extends DeferredState<EntityListScreen<T>>
     with RouteAware {
   BuildActionItems<T>? buildActionItems;
+
+  /// The full list of entities fetched from the data source.
+  List<T> _allEntities = [];
+
+  /// The visible subset displayed in the list (paginated).
   List<T> entityList = [];
 
   /// Whether the initial data fetch is still in progress.
   var _isInitialLoading = true;
+
+  /// How many items are currently visible (pagination cursor).
+  var _visibleCount = 0;
+
+  /// Whether the next page is currently being appended.
+  var _isLoadingMore = false;
 
   String? filterOption;
   late final TextEditingController filterController;
   final _scrollController = ScrollController();
 
   static List<Widget> _noItems<T>(T entity) => <Widget>[];
+
+  bool get _paginationEnabled => widget.pageSize > 0;
 
   @override
   void initState() {
@@ -136,7 +153,51 @@ class EntityListScreenState<T extends Entity<T>>
 
     buildActionItems = widget.buildActionItems ?? _noItems;
 
+    _scrollController.addListener(_onScroll);
+
     setAppTitle(widget.entityNamePlural);
+  }
+
+  /// Load the next page of items when the user scrolls near the bottom.
+  void _onScroll() {
+    if (!_paginationEnabled || _isLoadingMore) {
+      return;
+    }
+    if (_visibleCount >= _allEntities.length) {
+      return; // all items already visible
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      _loadNextPage();
+    }
+  }
+
+  void _loadNextPage() {
+    if (_visibleCount >= _allEntities.length) {
+      return;
+    }
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    final nextEnd =
+        (_visibleCount + widget.pageSize).clamp(0, _allEntities.length);
+    setState(() {
+      _visibleCount = nextEnd;
+      entityList = _allEntities.sublist(0, _visibleCount);
+      _isLoadingMore = false;
+    });
+  }
+
+  /// Apply pagination to the full entity list, resetting the visible window.
+  void _applyPagination() {
+    if (_paginationEnabled) {
+      _visibleCount = widget.pageSize.clamp(0, _allEntities.length);
+      entityList = _allEntities.sublist(0, _visibleCount);
+    } else {
+      _visibleCount = _allEntities.length;
+      entityList = List.of(_allEntities);
+    }
   }
 
   @override
@@ -158,7 +219,8 @@ class EntityListScreenState<T extends Entity<T>>
     final list = await widget._fetchList(filterOption);
     if (mounted) {
       setState(() {
-        entityList = list;
+        _allEntities = list;
+        _applyPagination();
         _isInitialLoading = false;
       });
     }
@@ -166,22 +228,24 @@ class EntityListScreenState<T extends Entity<T>>
 
   /// Insert or update a **single** entity in memory (partial refresh).
   void _partialRefresh(T updatedEntity) {
-    final idx = entityList.indexWhere((e) => e.id == updatedEntity.id);
+    final idx = _allEntities.indexWhere((e) => e.id == updatedEntity.id);
     setState(() {
       if (idx == -1) {
-        // If it's a newly created entity, add it
-        entityList.insert(0, updatedEntity);
+        _allEntities.insert(0, updatedEntity);
       } else {
-        // If it's an existing entity, update in-place
-        entityList[idx] = updatedEntity;
+        _allEntities[idx] = updatedEntity;
       }
+      _applyPagination();
     });
   }
 
   /// Remove the entity from our in-memory list.
   void _removeFromList(T entity) {
     setState(() {
-      entityList.removeWhere((e) => e.id == entity.id);
+      _allEntities.removeWhere((e) => e.id == entity.id);
+      // Adjust visible count down but keep current scroll position viable.
+      _visibleCount = _visibleCount.clamp(0, _allEntities.length);
+      entityList = _allEntities.sublist(0, _visibleCount);
     });
   }
 
@@ -301,14 +365,29 @@ class EntityListScreenState<T extends Entity<T>>
         );
       }
     }
+
+    final hasMore =
+        _paginationEnabled && _visibleCount < _allEntities.length;
+    final itemCount = entityList.length + (hasMore ? 1 : 0);
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       child: ListView.builder(
         key: const ValueKey('entity-list'),
         controller: _scrollController,
-        itemCount: entityList.length,
-        itemExtent: widget.cardHeight,
-        itemBuilder: (context, index) => _buildCard(entityList[index]),
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          if (index >= entityList.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return SizedBox(
+            height: widget.cardHeight,
+            child: _buildCard(entityList[index]),
+          );
+        },
       ),
     );
   }
