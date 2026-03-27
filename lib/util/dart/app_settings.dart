@@ -31,6 +31,7 @@ enum TaxDisplayMode {
 }
 
 class AppSettings {
+  static const _themeModeKey = 'themeMode';
   static const photoCacheMaxMbDefault = 100;
   static const _photoCacheMaxMbKey = 'photoCacheMaxMb';
   static const defaultProfitMarginTextDefault = '0';
@@ -124,6 +125,24 @@ class AppSettings {
   static Future<void> setTaxRatePercentText(String value) async {
     final settings = SettingsYaml.load(pathToSettings: await getSettingsPath());
     settings[_taxRateKey] = value.trim();
+    await settings.save();
+  }
+
+  /// Returns the persisted theme mode name (`system`, `light`, or `dark`).
+  /// Defaults to `system`.
+  static Future<String> getThemeModeName() async {
+    final settings = SettingsYaml.load(pathToSettings: await getSettingsPath());
+    final value = settings[_themeModeKey];
+    if (value is String && ['system', 'light', 'dark'].contains(value)) {
+      return value;
+    }
+    return 'system';
+  }
+
+  /// Persists the theme mode name.
+  static Future<void> setThemeModeName(String name) async {
+    final settings = SettingsYaml.load(pathToSettings: await getSettingsPath());
+    settings[_themeModeKey] = name;
     await settings.save();
   }
 }
