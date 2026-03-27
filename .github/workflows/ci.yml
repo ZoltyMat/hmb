@@ -49,8 +49,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      # Use dart2js (not Wasm) because app has dart:ffi deps
-      - run: flutter build web --release --dart2js-optimization O2
+      # Disable Wasm (default in Flutter 3.41+) — app has dart:ffi deps
+      - run: flutter build web --release --wasm=false
       - uses: actions/upload-artifact@v4
         with:
           name: web-build
