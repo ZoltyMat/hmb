@@ -11,6 +11,7 @@
  https://github.com/bsutton/hmb/blob/main/LICENSE
 */
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -57,7 +58,7 @@ class _SelectQuoteTaskPhotosDialogState
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   @override

@@ -44,9 +44,9 @@ class BackupEncryption {
     final encrypted = encrypter.encryptBytes(plainBytes, iv: iv);
 
     // Write IV + ciphertext
-    final output = outputFile.openWrite();
-    output.add(iv.bytes);
-    output.add(encrypted.bytes);
+    final output = outputFile.openWrite()
+      ..add(iv.bytes)
+      ..add(encrypted.bytes);
     await output.flush();
     await output.close();
   }

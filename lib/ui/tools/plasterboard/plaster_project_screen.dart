@@ -2,6 +2,8 @@
  Copyright © OnePub IP Pty Ltd. S. Brett Sutton. All Rights Reserved.
 */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../dao/dao.g.dart';
@@ -51,7 +53,7 @@ class _PlasterProjectScreenState extends State<PlasterProjectScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   Future<void> _load() async {
@@ -353,7 +355,7 @@ class _PlasterProjectScreenState extends State<PlasterProjectScreen> {
     _syncRoomControllers();
   }
 
-  Future<String?> _promptForRoomName() async => showDialog<String>(
+  Future<String?> _promptForRoomName() => showDialog<String>(
     context: context,
     builder: (_) => _RoomNameDialog(
       initialName: 'Room ${_rooms.length + 1}',
@@ -569,6 +571,9 @@ class _PlasterProjectScreenState extends State<PlasterProjectScreen> {
       return;
     }
     if (selected == 'length') {
+      if (!mounted) {
+        return;
+      }
       final length = await showDialog<int>(
         context: context,
         builder: (_) => _LengthDialog(
@@ -588,6 +593,9 @@ class _PlasterProjectScreenState extends State<PlasterProjectScreen> {
       return;
     }
 
+    if (!mounted) {
+      return;
+    }
     final opening = await showDialog<PlasterRoomOpening>(
       context: context,
       builder: (_) => _OpeningDialog(
