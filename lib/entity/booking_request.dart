@@ -176,6 +176,7 @@ class BookingRequest extends Entity<BookingRequest> {
 }
 
 class BookingRequestPayload {
+  final String id;
   final String name;
   final String businessName;
   final String firstName;
@@ -190,6 +191,7 @@ class BookingRequestPayload {
   final String day3;
 
   BookingRequestPayload({
+    required this.id,
     required this.name,
     required this.businessName,
     required this.firstName,
@@ -206,6 +208,7 @@ class BookingRequestPayload {
 
   factory BookingRequestPayload.fromMap(Map<String, dynamic> map) =>
       BookingRequestPayload(
+        id: (map['id'] as String?)?.trim() ?? '',
         name: (map['name'] as String?)?.trim() ?? '',
         businessName: (map['business_name'] as String?)?.trim() ?? '',
         firstName: (map['first_name'] as String?)?.trim() ?? '',
