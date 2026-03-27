@@ -4,121 +4,364 @@
  Note: This software is licensed under the GNU General Public License,
          with the following exceptions:
    • Permitted for internal use within your own business or organization only.
-   • Any external distribution, resale, or incorporation into products 
+   • Any external distribution, resale, or incorporation into products
       for third parties is strictly prohibited.
 
  See the full license on GitHub:
  https://github.com/bsutton/hmb/blob/main/LICENSE
 */
 
-// lib/src/ui/dashboard/settings_dashboard_page.dart
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../dao/dao.g.dart';
-import '../../../crud/system/system_storage_screen.dart';
-import '../../../widgets/layout/layout.g.dart';
-import '../dashboard.dart';
-import '../dashlet_card.dart';
+import '../../../../design_system/molecules/grouped_list_section.dart';
+import '../../../../design_system/theme.dart';
+import '../../../../src/version/version.g.dart';
+import '../../../../util/flutter/app_title.dart';
 
-class SettingsDashboardPage extends StatelessWidget {
+/// iOS Settings-style settings screen using GroupedListSection widgets.
+///
+/// Organises settings into logical groups: Account, Appearance,
+/// Data, Integrations, and About.
+class SettingsDashboardPage extends StatefulWidget {
   const SettingsDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) => DashboardPage(
-    title: 'Settings',
-    dashlets: [
-      DashletCard<void>.route(
-        label: 'Appearance',
-        hint: 'Choose between System, Light, and Dark theme',
-        icon: Icons.palette,
-        value: () => Future.value(const DashletValue(null)),
-        route: '/home/settings/appearance',
-        valueBuilder: (_, _) => const HMBEmpty(),
-      ),
-      DashletCard<void>.route(
-        label: 'SMS Templates',
-        hint: 'Maintain SMS Templates to speed up sending text messages',
-        icon: Icons.message,
-        value: () => Future.value(const DashletValue(null)),
-        route: '/home/settings/sms_templates',
-        valueBuilder: (_, _) => const HMBEmpty(),
-      ),
-      DashletCard<void>.route(
-        label: 'Business',
-        hint:
-            'Maintain your Business Name/No. Unit System, Web links and Operating Hours',
-        icon: Icons.business,
-        value: () => Future.value(const DashletValue(null)),
-        route: '/home/settings/business',
-        valueBuilder: (_, _) => const HMBEmpty(),
-      ),
-      DashletCard<void>.route(
-        label: 'Billing',
-        hint:
-            '''Maintain rates, bank details, payment options and formatting for Invoices and Quotes''',
-        icon: Icons.account_balance,
-        value: () => Future.value(const DashletValue(null)),
-        route: '/home/settings/billing',
-        valueBuilder: (_, _) => const HMBEmpty(),
-      ),
-      DashletCard<String>.route(
-        label: 'Storage',
-        hint:
-            'Configure local photo cache size and view local cache utilisation',
-        icon: Icons.storage,
-        value: () async {
-          final system = await DaoSystem().get();
-          final stats = await StorageStats.load();
-          return DashletValue(
-            '${system.photoCacheMaxMb} MB',
-            '${stats.photoCount} photos • ${_formatBytes(stats.totalBytes)}',
-          );
-        },
-        route: '/home/settings/storage',
-      ),
-      DashletCard<void>.route(
-        label: 'Contact',
-        hint:
-            '''Maintain your buinsess Contact Details used on Quotes and Invoices''',
-        icon: Icons.contact_phone,
-        value: () => Future.value(const DashletValue(null)),
-        route: '/home/settings/contact',
-        valueBuilder: (_, _) => const HMBEmpty(),
-      ),
-      DashletCard<void>.route(
-        label: 'Integrations',
-        hint:
-            '''Configure integrations to third party systems like Accounting Packages''',
-        icon: Icons.extension,
-        value: () => Future.value(const DashletValue(null)),
-        route: '/home/settings/integrations',
-        valueBuilder: (_, _) => const HMBEmpty(),
-      ),
-      DashletCard<void>.onTap(
-        label: 'Setup Wizard',
-        hint: 'Run the setup wizard',
-        icon: Icons.auto_fix_high,
-        value: () => Future.value(const DashletValue(null)),
-        onTap: (_) => context.push('/home/settings/wizard', extra: true),
-        valueBuilder: (_, _) => const HMBEmpty(),
-      ),
-    ],
-  );
+  State<SettingsDashboardPage> createState() => _SettingsDashboardPageState();
 }
 
-String _formatBytes(int bytes) {
-  if (bytes < 1024) {
-    return '$bytes B';
+class _SettingsDashboardPageState extends State<SettingsDashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    setAppTitle('Settings');
   }
-  final kb = bytes / 1024;
-  if (kb < 1024) {
-    return '${kb.toStringAsFixed(1)} KB';
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = HmbColors.of(context);
+    final typography = HmbTypography.of(context);
+
+    return Scaffold(
+      backgroundColor: colors.groupedBackground,
+      body: ListView(
+        children: [
+          const SizedBox(height: HmbSpacing.sm),
+
+          // -- Account section --
+          GroupedListSection(
+            header: 'Account',
+            footer: 'Business name, contact details, and billing settings.',
+            children: [
+              _SettingsTile(
+                icon: Icons.business,
+                iconColor: colors.systemBlue,
+                title: 'Business',
+                subtitle: 'Name, ABN, operating hours',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/business'),
+              ),
+              _SettingsTile(
+                icon: Icons.contact_phone,
+                iconColor: colors.systemGreen,
+                title: 'Contact',
+                subtitle: 'Address, phone, email',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/contact'),
+              ),
+              _SettingsTile(
+                icon: Icons.account_balance,
+                iconColor: colors.systemOrange,
+                title: 'Billing',
+                subtitle: 'Rates, bank details, invoice format',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/billing'),
+              ),
+            ],
+          ),
+
+          // -- Appearance section --
+          GroupedListSection(
+            header: 'Appearance',
+            children: [
+              _SettingsTile(
+                icon: Icons.palette,
+                iconColor: colors.systemPurple,
+                title: 'Theme',
+                subtitle: 'System, Light, or Dark',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/appearance'),
+              ),
+            ],
+          ),
+
+          // -- Notifications section (placeholder) --
+          GroupedListSection(
+            header: 'Notifications',
+            footer: 'Notification preferences will appear here in a future '
+                'update.',
+            children: [
+              _SettingsToggleTile(
+                icon: Icons.notifications_outlined,
+                iconColor: colors.systemRed,
+                title: 'Job Reminders',
+                typography: typography,
+                colors: colors,
+                value: false,
+                onChanged: null, // disabled placeholder
+              ),
+              _SettingsToggleTile(
+                icon: Icons.mark_email_unread_outlined,
+                iconColor: colors.systemTeal,
+                title: 'Booking Alerts',
+                typography: typography,
+                colors: colors,
+                value: false,
+                onChanged: null, // disabled placeholder
+              ),
+            ],
+          ),
+
+          // -- Data section --
+          GroupedListSection(
+            header: 'Data',
+            footer: 'Manage backups, storage cache, and message templates.',
+            children: [
+              _SettingsTile(
+                icon: Icons.cloud_upload_outlined,
+                iconColor: colors.systemBlue,
+                title: 'Backup & Restore',
+                subtitle: 'Google Drive and local backups',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/backup'),
+              ),
+              _SettingsTile(
+                icon: Icons.storage,
+                iconColor: colors.systemGray,
+                title: 'Storage',
+                subtitle: 'Photo cache size and usage',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/storage'),
+              ),
+              _SettingsTile(
+                icon: Icons.message_outlined,
+                iconColor: colors.systemGreen,
+                title: 'SMS Templates',
+                subtitle: 'Quick-send text message templates',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/sms_templates'),
+              ),
+            ],
+          ),
+
+          // -- Integrations section --
+          GroupedListSection(
+            header: 'Integrations',
+            children: [
+              _SettingsTile(
+                icon: Icons.extension,
+                iconColor: colors.systemIndigo,
+                title: 'Integrations',
+                subtitle: 'Xero, ChatGPT, IH Server',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/integrations'),
+              ),
+            ],
+          ),
+
+          // -- About section --
+          GroupedListSection(
+            header: 'About',
+            children: [
+              _SettingsTile(
+                icon: Icons.info_outline,
+                iconColor: colors.systemGray,
+                title: 'About HMB',
+                subtitle: 'Version $packageVersion',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/help/about'),
+              ),
+              _SettingsTile(
+                icon: Icons.auto_fix_high,
+                iconColor: colors.systemYellow,
+                title: 'Setup Wizard',
+                subtitle: 'Re-run initial configuration',
+                typography: typography,
+                colors: colors,
+                onTap: () =>
+                    context.push('/home/settings/wizard', extra: true),
+              ),
+              _SettingsTile(
+                icon: Icons.description_outlined,
+                iconColor: colors.systemGray,
+                title: 'Licenses',
+                subtitle: 'Open-source licenses',
+                typography: typography,
+                colors: colors,
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: 'Hold My Beer',
+                  applicationVersion: packageVersion,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: HmbSpacing.xxl),
+        ],
+      ),
+    );
   }
-  final mb = kb / 1024;
-  if (mb < 1024) {
-    return '${mb.toStringAsFixed(1)} MB';
-  }
-  final gb = mb / 1024;
-  return '${gb.toStringAsFixed(2)} GB';
+}
+
+// ---------------------------------------------------------------------------
+// Private row widgets
+// ---------------------------------------------------------------------------
+
+/// A navigation row that mimics CupertinoListTile with an icon, title,
+/// optional subtitle, and a trailing chevron disclosure indicator.
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.typography,
+    required this.colors,
+    required this.onTap,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String? subtitle;
+  final HmbTypography typography;
+  final HmbColors colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: HmbSpacing.lg,
+              vertical: HmbSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                // Icon in a rounded rect (iOS style)
+                Container(
+                  width: 29,
+                  height: 29,
+                  decoration: BoxDecoration(
+                    color: iconColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(icon, size: 18, color: Colors.white),
+                ),
+                const SizedBox(width: HmbSpacing.md),
+                // Title + subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: typography.body.copyWith(color: colors.label),
+                      ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          style: typography.footnote
+                              .copyWith(color: colors.secondaryLabel),
+                        ),
+                    ],
+                  ),
+                ),
+                // Chevron
+                Icon(
+                  CupertinoIcons.chevron_forward,
+                  size: 14,
+                  color: colors.tertiaryLabel,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// A toggle row with an icon, title, and a CupertinoSwitch on the trailing
+/// side. Used for boolean preferences (e.g. notifications).
+class _SettingsToggleTile extends StatelessWidget {
+  const _SettingsToggleTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.typography,
+    required this.colors,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final HmbTypography typography;
+  final HmbColors colors;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: HmbSpacing.lg,
+            vertical: HmbSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 29,
+                height: 29,
+                decoration: BoxDecoration(
+                  color: iconColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: HmbSpacing.md),
+              Expanded(
+                child: Text(
+                  title,
+                  style: typography.body.copyWith(
+                    color: onChanged != null
+                        ? colors.label
+                        : colors.tertiaryLabel,
+                  ),
+                ),
+              ),
+              CupertinoSwitch(
+                value: value,
+                onChanged: onChanged,
+              ),
+            ],
+          ),
+        ),
+      );
 }
