@@ -13,12 +13,21 @@ class HMBListPage extends StatefulWidget {
   final void Function()? onAdd;
   final void Function(String? filter)? onSearch;
 
+  /// Called when the user scrolls near the bottom and more items are available.
+  /// If null, no scroll-to-load-more behaviour is applied.
+  final VoidCallback? onLoadMore;
+
+  /// Whether there are more items available beyond [itemCount].
+  final bool hasMore;
+
   const HMBListPage({
     required this.emptyMessage,
     required this.itemCount,
     required this.itemBuilder,
     this.onSearch,
     this.onAdd,
+    this.onLoadMore,
+    this.hasMore = false,
     super.key,
   });
 
@@ -27,14 +36,48 @@ class HMBListPage extends StatefulWidget {
 }
 
 class _HMBListPageState extends State<HMBListPage> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (widget.onLoadMore == null || !widget.hasMore) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      widget.onLoadMore!();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final displayCount =
+        widget.itemCount + (widget.hasMore ? 1 : 0);
     final child = (widget.itemCount == 0)
         ? Center(child: Text(widget.emptyMessage))
         : ListView.builder(
-            itemCount: widget.itemCount,
-
-            itemBuilder: widget.itemBuilder,
+            controller: _scrollController,
+            itemCount: displayCount,
+            itemBuilder: (context, index) {
+              if (index >= widget.itemCount) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              return widget.itemBuilder(context, index);
+            },
           );
     return Surface(
       elevation: SurfaceElevation.e0,
