@@ -19,6 +19,7 @@ import '../../../entity/entity.dart';
 import '../../widgets/hmb_toast.dart';
 import '../../widgets/layout/layout.g.dart' show HMBColumn;
 import '../../widgets/save_and_close.dart';
+import '../../widgets/unsaved_changes_guard.dart';
 import '../base_full_screen/edit_entity_screen.dart';
 
 abstract class NestedEntityState<E extends Entity<E>> {
@@ -44,12 +45,20 @@ class NestedEntityEditScreen<C extends Entity<C>, P extends Entity<P>>
   final Future<void> Function(C? entity, Transaction transaction) onInsert;
   final Future<bool> Function() crossValidator;
 
+  /// Optional callback returning `true` when the form has unsaved changes.
+  final bool Function()? isDirty;
+
+  /// Optional callback invoked after a successful save to reset dirty state.
+  final VoidCallback? onSaved;
+
   const NestedEntityEditScreen({
     required this.editor,
     required this.onInsert,
     required this.entityName,
     required this.entityState,
     required this.dao,
+    this.isDirty,
+    this.onSaved,
     CrossValidator<C>? crossValidator,
     super.key,
   }) : crossValidator = crossValidator ?? noOpValidator;
@@ -69,40 +78,48 @@ class NestedEntityEditScreenState<C extends Entity<C>, P extends Entity<P>>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(
-        widget.entityState.currentEntity != null
-            ? 'Edit ${widget.entityName}'
-            : 'Add ${widget.entityName}',
+  Widget build(BuildContext context) {
+    Widget screen = Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.entityState.currentEntity != null
+              ? 'Edit ${widget.entityName}'
+              : 'Add ${widget.entityName}',
+        ),
+        automaticallyImplyLeading: false,
       ),
-      automaticallyImplyLeading: false,
-    ),
-    body: HMBColumn(
-      children: [
-        _commandButtons(context),
-        Flexible(
-          child: Form(
-            key: _formKey,
-            child: HMBColumn(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(4),
+      body: HMBColumn(
+        children: [
+          _commandButtons(context),
+          Flexible(
+            child: Form(
+              key: _formKey,
+              child: HMBColumn(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(4),
 
-                    /// Inject the entity specific editor.
-                    child: widget.editor(widget.entityState.currentEntity),
+                      /// Inject the entity specific editor.
+                      child: widget.editor(widget.entityState.currentEntity),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+
+    if (widget.isDirty != null) {
+      screen = UnsavedChangesGuard(isDirty: widget.isDirty!, child: screen);
+    }
+
+    return screen;
+  }
 
   Widget _commandButtons(BuildContext context) => SaveAndClose(
     onSave: _save,
@@ -148,6 +165,8 @@ class NestedEntityEditScreenState<C extends Entity<C>, P extends Entity<P>>
           }
           setState(() {});
         }
+
+        widget.onSaved?.call();
 
         if (close && mounted) {
           widget.entityState.refresh();

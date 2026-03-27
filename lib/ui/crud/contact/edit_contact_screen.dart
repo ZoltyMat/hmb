@@ -22,6 +22,7 @@ import '../../../entity/customer.dart';
 import '../../../entity/entity.dart';
 import '../../../util/flutter/platform_ex.dart';
 import '../../dialog/source_context.dart';
+import '../../widgets/dirty_form_mixin.dart';
 import '../../widgets/fields/hmb_email_field.dart';
 import '../../widgets/fields/hmb_name_field.dart';
 import '../../widgets/fields/hmb_phone_field.dart';
@@ -51,6 +52,7 @@ class ContactEditScreen<P extends Entity<P>> extends StatefulWidget {
 }
 
 class _ContactEditScreenState extends State<ContactEditScreen>
+    with DirtyFormMixin<ContactEditScreen>
     implements NestedEntityState<Contact> {
   late TextEditingController _firstNameController;
   late TextEditingController _surnameController;
@@ -95,10 +97,21 @@ class _ContactEditScreenState extends State<ContactEditScreen>
     );
 
     _firstNameFocusNode = FocusNode();
+
+    trackControllers([
+      _firstNameController,
+      _surnameController,
+      _mobileNumberController,
+      _landlineController,
+      _officeNumberController,
+      _emailaddressController,
+      _alternateEmailController,
+    ]);
   }
 
   @override
   void dispose() {
+    disposeTrackedControllers();
     _firstNameController.dispose();
     _surnameController.dispose();
     _mobileNumberController.dispose();
@@ -119,6 +132,8 @@ class _ContactEditScreenState extends State<ContactEditScreen>
     onInsert: (contact, transaction) =>
         widget.daoJoin.insertForParent(contact!, widget.parent, transaction),
     entityState: this,
+    isDirty: () => isDirty,
+    onSaved: markClean,
     editor: (contact) => HMBColumn(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
