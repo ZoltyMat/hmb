@@ -15,9 +15,11 @@
 
 import 'package:deferred_state/deferred_state.dart';
 import 'package:flutter/material.dart' hide StatefulBuilder;
-import 'package:strings/strings.dart';
-
 import '../../dao/dao.g.dart';
+import '../../design_system/atoms/status_badge.dart';
+import '../../design_system/tokens/colors.dart';
+import '../../design_system/tokens/spacing.dart';
+import '../../design_system/tokens/typography.dart';
 import '../../entity/entity.g.dart';
 import '../../util/dart/format.dart';
 import '../../util/dart/types.dart';
@@ -331,6 +333,41 @@ To approve it, reply to this email with:
     ),
   );
 
+  // -- Status badge helpers ----------------------------------------
+
+  StatusBadgeType _badgeType() {
+    switch (quote.state) {
+      case QuoteState.reviewing:
+        return StatusBadgeType.neutral;
+      case QuoteState.sent:
+        return StatusBadgeType.info;
+      case QuoteState.approved:
+      case QuoteState.invoiced:
+        return StatusBadgeType.success;
+      case QuoteState.rejected:
+        return StatusBadgeType.error;
+      case QuoteState.withdrawn:
+        return StatusBadgeType.warning;
+    }
+  }
+
+  String _badgeLabel() {
+    switch (quote.state) {
+      case QuoteState.reviewing:
+        return 'Draft';
+      case QuoteState.sent:
+        return 'Sent';
+      case QuoteState.approved:
+        return 'Approved';
+      case QuoteState.invoiced:
+        return 'Invoiced';
+      case QuoteState.rejected:
+        return 'Rejected';
+      case QuoteState.withdrawn:
+        return 'Withdrawn';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isApproved = quote.state == QuoteState.approved;
@@ -338,132 +375,192 @@ To approve it, reply to this email with:
     final isWithdrawn = quote.state == QuoteState.withdrawn;
     final showSentRollback = quote.state == QuoteState.approved;
     final showWithdrawn = quote.state == QuoteState.sent;
+    final isTerminal = isRejected || isWithdrawn;
+
+    final typography = HmbTypography.of(context);
+    final colors = HmbColors.of(context);
 
     return DeferredBuilder(
       this,
-      builder: (context) => HMBColumn(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // details.
-          HMBColumn(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: HmbSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // -- Header: quote number + status badge --
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: HmbSpacing.sm,
+              ),
+              child: Row(
                 children: [
-                  HMBLinkInternal(
-                    label: 'Job: #${quote.jobId}',
-                    navigateTo: () async {
-                      final job = await DaoJob().getById(quote.jobId);
-                      return FullPageListJobCard(job!);
-                    },
+                  Expanded(
+                    child: Text(
+                      'Quote #${quote.bestNumber}',
+                      style: typography.headline,
+                    ),
                   ),
-                  const HMBSpacer(width: true),
-                  Text(jc.job.summary),
+                  StatusBadge(
+                    label: _badgeLabel(),
+                    type: _badgeType(),
+                  ),
                 ],
               ),
-              Text('Customer: ${jc.customer.name}'),
-              Text('Primary Contact: ${jc.primaryContact?.fullname ?? 'N/A'}'),
-              Text('Billing Contact: ${jc.billingContact?.fullname ?? 'N/A'}'),
-              Text('Quote Margin: ${quote.quoteMargin}'),
-              Text('Total: ${quote.totalAmount}'),
-            ],
-          ),
-          // Display current state and date info.
-          HMBRow(
-            children: [
-              Text(quote.state.name.toCapitalised()),
-              if (quote.state == QuoteState.sent && quote.dateSent != null)
-                Text('Sent: ${formatDate(quote.dateSent!)}'),
-              if (quote.state == QuoteState.approved &&
-                  quote.dateApproved != null)
-                Text(formatDate(quote.dateApproved!)),
-            ],
-          ),
+            ),
+            const SizedBox(height: HmbSpacing.xs),
 
-          HMBRow(
-            children: [
-              HMBButton(
-                label: 'Send...',
-                hint: 'View and optionally send this quote',
-                enabled: !isRejected && !isWithdrawn,
-                onPressed: _viewSendQuote,
+            // -- Details --
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: HmbSpacing.sm,
               ),
-              HMBButton(
-                label: 'Milestones',
-                hint: 'Open milestones for this quote',
-                enabled: !isRejected && !isWithdrawn,
-                onPressed: _openMilestones,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      HMBLinkInternal(
+                        label: 'Job: #${quote.jobId}',
+                        navigateTo: () async {
+                          final job = await DaoJob().getById(quote.jobId);
+                          return FullPageListJobCard(job!);
+                        },
+                      ),
+                      const SizedBox(width: HmbSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          jc.job.summary,
+                          style: typography.subheadline,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: HmbSpacing.xs),
+                  Text(
+                    'Customer: ${jc.customer.name}',
+                    style: typography.subheadline,
+                  ),
+                  Text(
+                    'Contact: ${jc.primaryContact?.fullname ?? 'N/A'}',
+                    style: typography.footnote.copyWith(
+                      color: colors.secondaryLabel,
+                    ),
+                  ),
+                  const SizedBox(height: HmbSpacing.xs),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total: ${quote.totalAmount}',
+                        style: typography.headline,
+                      ),
+                      if (quote.dateSent != null)
+                        Text(
+                          'Sent: ${formatDate(quote.dateSent!)}',
+                          style: typography.footnote.copyWith(
+                            color: colors.secondaryLabel,
+                          ),
+                        ),
+                      if (quote.dateApproved != null)
+                        Text(
+                          'Approved: ${formatDate(quote.dateApproved!)}',
+                          style: typography.footnote.copyWith(
+                            color: colors.secondaryLabel,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-              HMBButton(
-                label: 'Invoice',
-                hint: 'Create invoice(s) from quote milestones',
-                enabled: !isRejected && !isWithdrawn,
-                onPressed: _openInvoiceAction,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: HmbSpacing.sm),
 
-          // --- State Update Buttons ---
-          HMBRow(
-            children: [
-              HMBButton(
-                label: showSentRollback ? 'Unapprove' : 'Approve',
-                hint: showSentRollback
-                    ? 'Move approved quote back to sent'
-                    : 'Mark the quote as approved by the customer',
-                enabled: showSentRollback || (!isApproved && !isWithdrawn),
-                onPressed: () async {
-                  await _updateQuote(() async {
-                    if (showSentRollback) {
-                      await DaoQuote().markQuoteSent(quote.id);
-                    } else {
-                      await DaoQuote().approveQuote(quote.id);
-                    }
-                  });
-                },
-              ),
-              HMBButton(
-                label: 'Reject',
-                hint: 'Mark the quote as rejected by the Customer',
-                // disable when already rejected
-                enabled: !isRejected && !isWithdrawn,
-                onPressed: () async {
-                  final action = await _promptRejectAction(context);
-                  if (action == null) {
-                    return;
-                  }
-
-                  await _updateQuote(() async {
-                    await DaoQuote().rejectQuote(quote.id);
-
-                    if (action == _RejectAction.quoteAndJob) {
-                      final job = await DaoJob().getById(quote.jobId);
-                      if (job != null) {
-                        job.status = JobStatus.rejected;
-                        await DaoJob().update(job);
-                      }
-                    }
-                  });
-                },
-              ),
-              if (showWithdrawn)
+            // -- Primary action buttons --
+            HMBRow(
+              children: [
                 HMBButton(
-                  label: 'Withdraw',
-                  hint: 'Mark the quote as withdrawn by your business',
+                  label: 'Send...',
+                  hint: 'View and optionally send this quote',
+                  enabled: !isTerminal,
+                  onPressed: _viewSendQuote,
+                ),
+                HMBButton(
+                  label: 'Milestones',
+                  hint: 'Open milestones for this quote',
+                  enabled: !isTerminal,
+                  onPressed: _openMilestones,
+                ),
+                HMBButton(
+                  label: 'Invoice',
+                  hint: 'Create invoice(s) from quote milestones',
+                  enabled: !isTerminal,
+                  onPressed: _openInvoiceAction,
+                ),
+              ],
+            ),
+
+            // -- State update buttons --
+            HMBRow(
+              children: [
+                HMBButton(
+                  label: showSentRollback ? 'Unapprove' : 'Approve',
+                  hint: showSentRollback
+                      ? 'Move approved quote back to sent'
+                      : 'Mark the quote as approved by the customer',
+                  enabled:
+                      showSentRollback || (!isApproved && !isWithdrawn),
                   onPressed: () async {
-                    final confirm = await _promptWithdraw(context);
-                    if (confirm != true) {
-                      return;
-                    }
                     await _updateQuote(() async {
-                      await DaoQuote().withdrawQuote(quote.id);
+                      if (showSentRollback) {
+                        await DaoQuote().markQuoteSent(quote.id);
+                      } else {
+                        await DaoQuote().approveQuote(quote.id);
+                      }
                     });
                   },
                 ),
-            ],
-          ),
-          // --- End State Buttons ---
-        ],
+                HMBButton(
+                  label: 'Reject',
+                  hint: 'Mark the quote as rejected by the Customer',
+                  enabled: !isTerminal,
+                  onPressed: () async {
+                    final action = await _promptRejectAction(context);
+                    if (action == null) {
+                      return;
+                    }
+
+                    await _updateQuote(() async {
+                      await DaoQuote().rejectQuote(quote.id);
+
+                      if (action == _RejectAction.quoteAndJob) {
+                        final job = await DaoJob().getById(quote.jobId);
+                        if (job != null) {
+                          job.status = JobStatus.rejected;
+                          await DaoJob().update(job);
+                        }
+                      }
+                    });
+                  },
+                ),
+                if (showWithdrawn)
+                  HMBButton(
+                    label: 'Withdraw',
+                    hint: 'Mark the quote as withdrawn by your business',
+                    onPressed: () async {
+                      final confirm = await _promptWithdraw(context);
+                      if (confirm != true) {
+                        return;
+                      }
+                      await _updateQuote(() async {
+                        await DaoQuote().withdrawQuote(quote.id);
+                      });
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
