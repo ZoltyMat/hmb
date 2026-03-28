@@ -14,6 +14,7 @@
 import 'dart:async';
 
 import 'package:deferred_state/deferred_state.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:june/june.dart';
@@ -32,6 +33,7 @@ import '../../../entity/system.dart';
 import '../../../entity/task.dart';
 import '../../../entity/task_item.dart';
 import '../../../entity/task_item_type.dart';
+import '../../../design_system/tokens/colors.dart';
 import '../../../util/dart/app_settings.dart';
 import '../../../util/dart/fixed_ex.dart';
 import '../../../util/dart/measurement_type.dart';
@@ -230,12 +232,15 @@ class _TaskItemEditScreenState extends DeferredState<TaskItemEditScreen>
               return null;
             },
           ),
-          SwitchListTile(
+          ListTile(
             title: const Text('Completed'),
-            value: _completed,
-            onChanged: (value) => setState(() {
-              _completed = value;
-            }),
+            trailing: CupertinoSwitch(
+              value: _completed,
+              activeTrackColor: HmbColors.of(context).tint,
+              onChanged: (value) => setState(() {
+                _completed = value;
+              }),
+            ),
           ),
           _chooseItemType(taskItem),
           HMBTextArea(controller: _purposeController, labelText: 'Purpose'),
@@ -488,16 +493,19 @@ class _TaskItemEditScreenState extends DeferredState<TaskItemEditScreen>
   );
 
   /// Control how charge is calculated.
-  Widget _buildDirectChargeField() => SwitchListTile(
+  Widget _buildDirectChargeField() => ListTile(
     title: const Text('Enter charge directly'),
-    value: _chargeMode == ChargeMode.userDefined,
-    onChanged: (val) => setState(() {
-      _chargeMode = val ? ChargeMode.userDefined : ChargeMode.calculated;
-      // if switching off manual, re-compute from margin/qty/hours
-      if (_chargeMode != ChargeMode.userDefined) {
-        _calculateChargeFromMargin(_marginController.text);
-      }
-    }),
+    trailing: CupertinoSwitch(
+      value: _chargeMode == ChargeMode.userDefined,
+      activeTrackColor: HmbColors.of(context).tint,
+      onChanged: (val) => setState(() {
+        _chargeMode = val ? ChargeMode.userDefined : ChargeMode.calculated;
+        // if switching off manual, re-compute from margin/qty/hours
+        if (_chargeMode != ChargeMode.userDefined) {
+          _calculateChargeFromMargin(_marginController.text);
+        }
+      }),
+    ),
   );
 
   void _calculateEstimatedCostFromHours(String? hoursValue) {

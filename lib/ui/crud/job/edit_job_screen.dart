@@ -27,6 +27,7 @@ import '../../../util/dart/format.dart';
 import '../../../util/dart/local_date.dart';
 import '../../../util/dart/money_ex.dart';
 import '../../widgets/icons/circle.dart';
+import '../../widgets/layout/keyboard_scroll_mixin.dart';
 import '../../widgets/layout/layout.g.dart';
 import '../../widgets/dirty_form_mixin.dart';
 import '../../widgets/select/hmb_select_customer.dart';
@@ -43,7 +44,7 @@ class JobEditScreen extends StatefulWidget {
 }
 
 class _JobEditScreenState extends DeferredState<JobEditScreen>
-    with DirtyFormMixin<JobEditScreen>
+    with DirtyFormMixin<JobEditScreen>, KeyboardScrollMixin<JobEditScreen>
     implements EntityState<Job> {
   late TextEditingController _summaryController;
   late TextEditingController _descriptionController;
@@ -61,6 +62,9 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
 
   BillingType _selectedBillingType = BillingType.timeAndMaterial;
   late final ScrollController scrollController;
+
+  @override
+  ScrollController get keyboardScrollController => scrollController;
 
   @override
   Job? currentEntity;
@@ -105,6 +109,15 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
       _assumptionController,
       _hourlyRateController,
       _bookingFeeController,
+    ]);
+
+    initKeyboardScroll([
+      _summaryFocusNode,
+      _descriptionFocusNode,
+      _notesFocusNode,
+      _assumptionFocusNode,
+      _hourlyRateFocusNode,
+      _bookingFeeFocusNode,
     ]);
   }
 
@@ -309,6 +322,7 @@ class _JobEditScreenState extends DeferredState<JobEditScreen>
         BillingParty.customer;
     June.getState(JobBillingContact.new).contactId = null;
 
+    disposeKeyboardScroll();
     disposeTrackedControllers();
     scrollController.dispose();
     _summaryController.dispose();
