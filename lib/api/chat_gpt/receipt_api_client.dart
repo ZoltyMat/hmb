@@ -1,10 +1,10 @@
 /*
- Copyright © OnePub IP Pty Ltd. S. Brett Sutton. All Rights Reserved.
+ Copyright (c) OnePub IP Pty Ltd. S. Brett Sutton. All Rights Reserved.
 
- Note: This software is licensed under the GNU General Public License, 
+ Note: This software is licensed under the GNU General Public License,
  with the following exceptions:
-   • Permitted for internal use within your own business or organization only.
-   • Any external distribution, resale, or incorporation into products for
+   * Permitted for internal use within your own business or organization only.
+   * Any external distribution, resale, or incorporation into products for
     third parties is strictly prohibited.
 
  See the full license on GitHub:
@@ -15,55 +15,40 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
-
-import 'chat_gpt_auth_service.dart';
+import '../../ai/ai_provider.dart';
+import '../../ai/ai_provider_factory.dart';
+import '../../ai/providers/openai_provider.dart';
 
 class ReceiptApiClient {
-  final _auth = ChatGptAuth();
+  /// Accepts an optional [AIProvider] for testing; otherwise uses the factory.
+  ReceiptApiClient({AIProvider? provider}) : _injected = provider;
 
-  /// Uploads a receipt image and extracts data via OpenAI ChatGPT API,
-  /// using ChatGptAuth for token management.
+  final AIProvider? _injected;
+
+  static const _systemPrompt =
+      'Extract the following fields from the base64-encoded receipt image: '
+      'receipt_date (YYYY-MM-DD), job/order number (if present), supplier '
+      '(if present), total_excluding_tax (in cents), tax (in cents), '
+      'total_including_tax (in cents). Respond with a JSON object only.';
+
+  /// Uploads a receipt image and extracts data via the configured AI provider.
   Future<Map<String, dynamic>> extractData(String filePath) async {
-    // Ensure user is authenticated and get a valid token
-    final token = await _auth.getAccessToken();
-
-    // Read & encode image
-    final bytes = await File(filePath).readAsBytes();
-    final b64 = base64Encode(bytes);
-
-    // Call OpenAI
-    final response = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'model': 'gpt-4o-mini',
-        'messages': [
-          {
-            'role': 'system',
-            'content':
-                'Extract the following fields from the base64-encoded receipt image: receipt_date (YYYY-MM-DD), job/order number (if present), supplier (if present), total_excluding_tax (in cents), tax (in cents), total_including_tax (in cents). Respond with a JSON object only.',
-          },
-          {'role': 'user', 'content': b64},
-        ],
-        'temperature': 0.0,
-      }),
-    );
-
-    if (response.statusCode != 200) {
+    final provider = _injected ?? await AIProviderFactory.create();
+    if (provider == null) {
       throw Exception(
-        'OpenAI API error: ${response.statusCode}: ${response.body}',
+        'No AI provider configured. Add an API key in Settings.',
       );
     }
 
-    final jsonResponse = json.decode(response.body) as Map<String, dynamic>;
-    final choice =
-        (jsonResponse['choices'] as List).first as Map<String, dynamic>;
-    final content =
-        (choice['message'] as Map<String, dynamic>)['content'] as String;
-    return json.decode(content) as Map<String, dynamic>;
+    final bytes = await File(filePath).readAsBytes();
+
+    final rawResponse = await provider.analyzeImage(
+      bytes,
+      _systemPrompt,
+      systemPrompt: _systemPrompt,
+    );
+
+    final normalized = OpenAIProvider.normalizeContent(rawResponse);
+    return jsonDecode(normalized) as Map<String, dynamic>;
   }
 }
