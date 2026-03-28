@@ -108,8 +108,7 @@ class EntityEditScreenState<E extends Entity<E>>
                     /// unique in all realworld scenarios.
                     widget.entityState.currentEntity?.createdDate,
                   ),
-                  // controller: widget.scrollController ??
-                  //     ScrollController(), // Attach the controller here
+                  controller: widget.scrollController,
                   padding: const EdgeInsets.all(4),
                   child: widget.editor(
                     widget.entityState.currentEntity,

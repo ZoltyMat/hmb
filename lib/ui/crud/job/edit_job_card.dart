@@ -39,6 +39,7 @@ import '../../../util/flutter/app_title.dart';
 import '../../../util/flutter/platform_ex.dart';
 import '../../dialog/hmb_file_picker_linux.dart';
 import '../../scheduling/schedule_page.dart';
+import '../../widgets/fields/hmb_segmented_field.dart';
 import '../../widgets/fields/hmb_text_area.dart';
 import '../../widgets/fields/hmb_text_field.dart';
 import '../../widgets/hmb_button.dart';
@@ -339,31 +340,16 @@ class _EditJobCardState extends DeferredState<EditJobCard> {
   );
 
   Widget _chooseBillingType() =>
-      HMBDroplist<BillingType>(
-        title: 'Billing Type',
-        items: (filter) async => BillingType.values,
-        selectedItem: () async => widget.selectedBillingType,
+      HMBSegmentedField<BillingType>(
+        label: 'Billing Type',
+        options: BillingType.values,
+        selected: widget.selectedBillingType,
+        labelBuilder: (value) => value.display,
         onChanged: (billingType) {
-          if (billingType != null) {
-            widget.onBillingTypeChanged(billingType);
-          }
+          widget.onBillingTypeChanged(billingType);
           setState(() {});
         },
-        format: (value) => value.display,
-      ).help('Billing Type', '''
-Time and Materials (Cost Plus)
-
-Bill the customer based on hours tracked and Task Items purchased.
-You can progressively invoice the customer during the Job.
-
-Navigate to Billing | Invoices
-
-Fixed Price
-Bills the customer a pre-agreed amount.
-
-You can create Milestone Invoices as the Job progresses.
-Navigate to Billing | Milestones.
-''');
+      );
 
   Widget _showHourlyRate() => HMBTextField(
     key: const Key('hourlyRate'),

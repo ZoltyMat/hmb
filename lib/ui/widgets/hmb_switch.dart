@@ -11,8 +11,10 @@
  https://github.com/bsutton/hmb/blob/main/LICENSE
 */
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../design_system/tokens/colors.dart';
 import 'layout/layout.g.dart';
 
 class HMBSwitch extends StatelessWidget {
@@ -36,15 +38,22 @@ class HMBSwitch extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => HMBColumn(
-    leadingSpace: leadingSpace,
-    children: [
-      SwitchListTile(
-        focusNode: focusNode,
-        title: Text(labelText),
-        value: initialValue ?? false,
-        onChanged: onChanged,
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final colors = HmbColors.of(context);
+
+    return HMBColumn(
+      leadingSpace: leadingSpace,
+      children: [
+        ListTile(
+          focusNode: focusNode,
+          title: Text(labelText),
+          trailing: CupertinoSwitch(
+            value: initialValue ?? false,
+            activeTrackColor: colors.tint,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
 }

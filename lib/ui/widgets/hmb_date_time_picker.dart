@@ -11,9 +11,11 @@
  https://github.com/bsutton/hmb/blob/main/LICENSE
 */
 
+import 'package:flutter/cupertino.dart' hide StatefulBuilder;
 import 'package:flutter/material.dart' hide StatefulBuilder;
 import 'package:intl/intl.dart';
 
+import '../../design_system/tokens/colors.dart';
 import 'layout/layout.g.dart';
 import 'stateful_builder.dart';
 import 'text/hmb_text.dart';
@@ -209,22 +211,108 @@ class _HMBDateTimeFieldState extends State<HMBDateTimeField> {
   Future<TimeOfDay?> _showTimePicker(
     BuildContext context,
     DateTime? currentValue,
-  ) => showTimePicker(
-    context: context,
-    initialTime: TimeOfDay.fromDateTime(currentValue ?? DateTime.now()),
-    builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-      child: child!,
-    ),
-  );
+  ) async {
+    final colors = HmbColors.of(context);
+    final initial = currentValue ?? DateTime.now();
+    var picked = initial;
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: colors.secondarySystemBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: SizedBox(
+          height: 300,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    child: Text('Cancel',
+                        style: TextStyle(color: colors.systemRed)),
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                  ),
+                  CupertinoButton(
+                    child: Text('Done',
+                        style: TextStyle(
+                          color: colors.tint,
+                          fontWeight: FontWeight.w600,
+                        )),
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.time,
+                  initialDateTime: initial,
+                  use24hFormat: false,
+                  onDateTimeChanged: (dt) => picked = dt,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed == true) {
+      return TimeOfDay(hour: picked.hour, minute: picked.minute);
+    }
+    return null;
+  }
 
   Future<DateTime?> _showDatePicker(
     BuildContext context,
     DateTime? currentValue,
-  ) => showDatePicker(
-    context: context,
-    firstDate: DateTime(1900),
-    initialDate: currentValue ?? DateTime.now(),
-    lastDate: DateTime(2100),
-  );
+  ) async {
+    final colors = HmbColors.of(context);
+    final initial = currentValue ?? DateTime.now();
+    var picked = initial;
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: colors.secondarySystemBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: SizedBox(
+          height: 300,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    child: Text('Cancel',
+                        style: TextStyle(color: colors.systemRed)),
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                  ),
+                  CupertinoButton(
+                    child: Text('Done',
+                        style: TextStyle(
+                          color: colors.tint,
+                          fontWeight: FontWeight.w600,
+                        )),
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: initial,
+                  minimumDate: DateTime(1900),
+                  maximumDate: DateTime(2100),
+                  onDateTimeChanged: (dt) => picked = dt,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return confirmed == true ? picked : null;
+  }
 }
