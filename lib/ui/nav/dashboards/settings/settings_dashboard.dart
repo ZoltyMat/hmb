@@ -100,6 +100,22 @@ class _SettingsDashboardPageState extends State<SettingsDashboardPage> {
             ],
           ),
 
+          // -- AI Assistant section --
+          GroupedListSection(
+            header: 'AI Assistant',
+            children: [
+              _SettingsTile(
+                icon: Icons.psychology,
+                iconColor: colors.systemIndigo,
+                title: 'AI Assistant',
+                subtitle: 'Provider, model, API keys',
+                typography: typography,
+                colors: colors,
+                onTap: () => context.push('/home/settings/ai'),
+              ),
+            ],
+          ),
+
           // -- Notifications section (placeholder) --
           GroupedListSection(
             header: 'Notifications',
