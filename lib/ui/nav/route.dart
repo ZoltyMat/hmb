@@ -1,10 +1,10 @@
 /*
- Copyright © OnePub IP Pty Ltd. S. Brett Sutton. All Rights Reserved.
+ Copyright (c) OnePub IP Pty Ltd. S. Brett Sutton. All Rights Reserved.
 
  Note: This software is licensed under the GNU General Public License,
          with the following exceptions:
-   • Permitted for internal use within your own business or organization only.
-   • Any external distribution, resale, or incorporation into products 
+   - Permitted for internal use within your own business or organization only.
+   - Any external distribution, resale, or incorporation into products
       for third parties is strictly prohibited.
 
  See the full license on GitHub:
@@ -57,7 +57,7 @@ import 'dashboards/integration/integration_dashboard.dart';
 import 'dashboards/main/home_dashboard.dart';
 import 'dashboards/settings/settings_dashboard.dart';
 import 'dashboards/tools/tools_dashboard.dart';
-import 'nav.g.dart';
+import 'tab_shell.dart';
 
 GoRouter createGoRouter(
   GlobalKey<NavigatorState> navigatorKey,
@@ -102,12 +102,61 @@ GoRouter createGoRouter(
       },
     ),
 
-    // This where the user lands after we finish initialising.
-    GoRoute(
-      path: '/home',
-      builder: (_, _) => const HomeScaffold(initialScreen: MainDashboardPage()),
-      routes: [...dashboardRoutes()],
+    // Tabbed navigation shell for the 5 main tabs.
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) =>
+          TabShell(navigationShell: navigationShell),
+      branches: [
+        // Tab 0: Jobs
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/home/jobs',
+              builder: (_, _) => const JobListScreen(),
+            ),
+          ],
+        ),
+        // Tab 1: Customers
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/home/customers',
+              builder: (_, _) => const CustomerListScreen(),
+            ),
+          ],
+        ),
+        // Tab 2: Dashboard (center, default)
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/home',
+              builder: (_, _) => const MainDashboardPage(),
+              routes: _nonTabRoutes(),
+            ),
+          ],
+        ),
+        // Tab 3: Invoices
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/home/accounting/invoices',
+              builder: (_, _) => const InvoiceListScreen(),
+            ),
+          ],
+        ),
+        // Tab 4: Settings
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/home/settings',
+              builder: (_, _) => const SettingsDashboardPage(),
+              routes: settingRoutes(),
+            ),
+          ],
+        ),
+      ],
     ),
+
     GoRoute(
       path: '/photo_viewer',
       builder: (context, state) {
@@ -122,169 +171,98 @@ GoRouter createGoRouter(
         );
       },
     ),
-    // GoRoute(path: '/testpdf', builder: (context, state) => const TestPdfZoom()),
   ],
 );
 
-List<GoRoute> dashboardRoutes() => [
-  // 3) Jobs route (replaces the old root builder).
-  GoRoute(
-    path: 'jobs',
-    builder: (_, _) => const HomeScaffold(initialScreen: JobListScreen()),
-  ),
+/// Routes that appear under the /home branch but are NOT primary tabs.
+/// These render inside the Dashboard tab's navigator.
+List<GoRoute> _nonTabRoutes() => [
   GoRoute(
     path: 'todo',
-    builder: (_, _) => const HomeScaffold(initialScreen: ToDoListScreen()),
+    builder: (_, _) => const ToDoListScreen(),
   ),
   GoRoute(
     path: 'today',
-    builder: (_, _) => const HomeScaffold(initialScreen: TodayPage()),
+    builder: (_, _) => const TodayPage(),
   ),
   GoRoute(
     path: 'booking_requests',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: BookingRequestListScreen()),
+    builder: (_, _) => const BookingRequestListScreen(),
   ),
-
   GoRoute(
     path: 'help',
-    builder: (_, _) => const HomeScaffold(initialScreen: HelpDashboardPage()),
+    builder: (_, _) => const HelpDashboardPage(),
     routes: helpRoutes(),
   ),
-
   GoRoute(
     path: 'schedule',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: SchedulePage(dialogMode: false)),
+    builder: (_, _) => const SchedulePage(dialogMode: false),
   ),
   GoRoute(
     path: 'shopping',
-    builder: (_, _) => const HomeScaffold(initialScreen: ShoppingScreen()),
+    builder: (_, _) => const ShoppingScreen(),
   ),
   GoRoute(
     path: 'packing',
-    builder: (_, _) => const HomeScaffold(initialScreen: PackingScreen()),
+    builder: (_, _) => const PackingScreen(),
   ),
   GoRoute(
     path: 'accounting',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: AccountingDashboardPage()),
+    builder: (_, _) => const AccountingDashboardPage(),
     routes: accountingRoutes(),
   ),
   GoRoute(
-    path: 'customers',
-    builder: (_, _) => const HomeScaffold(initialScreen: CustomerListScreen()),
-  ),
-  GoRoute(
     path: 'suppliers',
-    builder: (_, _) => const HomeScaffold(initialScreen: SupplierListScreen()),
+    builder: (_, _) => const SupplierListScreen(),
   ),
   GoRoute(
     path: 'tools',
-    builder: (_, _) => const HomeScaffold(initialScreen: ToolsDashboardPage()),
+    builder: (_, _) => const ToolsDashboardPage(),
   ),
   GoRoute(
     path: 'tools/inventory',
-    builder: (_, _) => const HomeScaffold(initialScreen: ToolListScreen()),
+    builder: (_, _) => const ToolListScreen(),
   ),
   GoRoute(
     path: 'tools/plasterboard',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: PlasterProjectListScreen()),
+    builder: (_, _) => const PlasterProjectListScreen(),
   ),
   GoRoute(
     path: 'manufacturers',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: ManufacturerListScreen()),
+    builder: (_, _) => const ManufacturerListScreen(),
   ),
   GoRoute(
     path: 'backup',
-    builder: (_, _) => const HomeScaffold(initialScreen: BackupDashboardPage()),
+    builder: (_, _) => const BackupDashboardPage(),
     routes: backupRoutes(),
   ),
-
-  GoRoute(
-    path: 'settings',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: SettingsDashboardPage()),
-    routes: settingRoutes(),
-  ),
 ];
-
-// List<GoRoute> jobRoutes() => [
-//   GoRoute(
-//     name: 'estimate',
-//     path: 'estimates/:jobId',
-//     builder: (context, state) {
-//       final jobId = state.pathParameters['jobId']!;
-//       return FutureBuilderEx<Job?>(
-//         future: DaoJob().getById(int.parse(jobId)),
-//         builder: (ctx, job) => JobEstimatesListScreen(job: job),
-//       );
-//     },
-//   ),
-//   GoRoute(
-//     name: 'quotes',
-//     path: 'quotes/:jobId',
-//     builder: (context, state) {
-//       final jobId = state.pathParameters['jobId']!;
-//       return FutureBuilderEx<Job?>(
-//         future: DaoJob().getById(int.parse(jobId)),
-//         builder: (ctx, job) => QuoteListScreen(job: job),
-//       );
-//     },
-//   ),
-//   GoRoute(
-//     name: 'track',
-//     path: 'track/:jobId',
-//     builder: (context, state) {
-//       final jobId = state.pathParameters['jobId']!;
-//       return FutureBuilderEx<Job?>(
-//         future: DaoJob().getById(int.parse(jobId)),
-//         builder: (ctx, job) => TimeEntryListScreen(job: job!),
-//       );
-//     },
-//   ),
-//   GoRoute(
-//     name: 'invoices',
-//     path: 'invoices/:jobId',
-//     builder: (context, state) {
-//       final jobId = state.pathParameters['jobId']!;
-//       return FutureBuilderEx<Job?>(
-//         future: DaoJob().getById(int.parse(jobId)),
-//         builder: (ctx, job) => InvoiceListScreen(job: job),
-//       );
-//     },
-//   ),
-// ];
 
 // 4) All other routes directly from the top level:
 List<GoRoute> accountingRoutes() => [
   GoRoute(
     path: 'quotes',
-    builder: (_, _) => const HomeScaffold(initialScreen: QuoteListScreen()),
+    builder: (_, _) => const QuoteListScreen(),
   ),
   GoRoute(
     path: 'invoices',
-    builder: (_, _) => const HomeScaffold(initialScreen: InvoiceListScreen()),
+    builder: (_, _) => const InvoiceListScreen(),
   ),
-
   GoRoute(
     path: 'to_be_invoiced',
-    builder: (_, _) => HomeScaffold(initialScreen: YetToBeInvoicedScreen()),
+    builder: (_, _) => YetToBeInvoicedScreen(),
   ),
   GoRoute(
     path: 'estimator',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: JobEstimatesListScreen()),
+    builder: (_, _) => const JobEstimatesListScreen(),
   ),
   GoRoute(
     path: 'milestones',
-    builder: (_, _) => const HomeScaffold(initialScreen: ListMilestoneScreen()),
+    builder: (_, _) => const ListMilestoneScreen(),
   ),
   GoRoute(
     path: 'receipts',
-    builder: (_, _) => const HomeScaffold(initialScreen: ReceiptListScreen()),
+    builder: (_, _) => const ReceiptListScreen(),
   ),
 ];
 
@@ -292,51 +270,43 @@ List<GoRoute> accountingRoutes() => [
 List<GoRoute> settingRoutes() => [
   GoRoute(
     path: 'appearance',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: AppearanceScreen()),
+    builder: (_, _) => const AppearanceScreen(),
   ),
   GoRoute(
     path: 'sms_templates',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: MessageTemplateListScreen()),
+    builder: (_, _) => const MessageTemplateListScreen(),
   ),
   GoRoute(
     path: 'business',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: SystemBusinessScreen()),
+    builder: (_, _) => const SystemBusinessScreen(),
   ),
   GoRoute(
     path: 'billing',
-    builder: (_, _) => const HomeScaffold(initialScreen: SystemBillingScreen()),
+    builder: (_, _) => const SystemBillingScreen(),
   ),
   GoRoute(
     path: 'storage',
-    builder: (_, _) => const HomeScaffold(initialScreen: SystemStorageScreen()),
+    builder: (_, _) => const SystemStorageScreen(),
   ),
   GoRoute(
     path: 'contact',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: SystemContactInformationScreen()),
+    builder: (_, _) => const SystemContactInformationScreen(),
   ),
   GoRoute(
     path: 'integrations',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: IntegrationDashboardPage()),
+    builder: (_, _) => const IntegrationDashboardPage(),
     routes: [
       GoRoute(
         path: 'ihserver',
-        builder: (_, _) =>
-            const HomeScaffold(initialScreen: IhServerIntegrationScreen()),
+        builder: (_, _) => const IhServerIntegrationScreen(),
       ),
       GoRoute(
         path: 'chatgpt',
-        builder: (_, _) =>
-            const HomeScaffold(initialScreen: ChatGptIntegrationScreen()),
+        builder: (_, _) => const ChatGptIntegrationScreen(),
       ),
       GoRoute(
         path: 'xero',
-        builder: (_, _) =>
-            const HomeScaffold(initialScreen: XeroIntegrationScreen()),
+        builder: (_, _) => const XeroIntegrationScreen(),
       ),
     ],
   ),
@@ -344,9 +314,7 @@ List<GoRoute> settingRoutes() => [
     path: 'wizard',
     builder: (context, state) {
       final fromSettings = state.extra as bool? ?? false;
-      return HomeScaffold(
-        initialScreen: SetupWizard(launchedFromSettings: fromSettings),
-      );
+      return SetupWizard(launchedFromSettings: fromSettings);
     },
   ),
 ];
@@ -354,25 +322,22 @@ List<GoRoute> settingRoutes() => [
 List<GoRoute> helpRoutes() => [
   GoRoute(
     path: 'about',
-    builder: (_, _) => const HomeScaffold(initialScreen: AboutScreen()),
+    builder: (_, _) => const AboutScreen(),
   ),
 ];
 
 List<GoRoute> backupRoutes() => [
   GoRoute(
     path: 'google/backup',
-    builder: (_, _) =>
-        const HomeScaffold(initialScreen: GoogleDriveBackupScreen()),
+    builder: (_, _) => const GoogleDriveBackupScreen(),
   ),
   GoRoute(
     path: 'google/restore',
-    builder: (_, _) => const HomeScaffold(
-      initialScreen: GoogleDriveBackupScreen(restoreOnly: true),
-    ),
+    builder: (_, _) => const GoogleDriveBackupScreen(restoreOnly: true),
   ),
   GoRoute(
     path: 'local/backup',
-    builder: (_, _) => const HomeScaffold(initialScreen: LocalBackupScreen()),
+    builder: (_, _) => const LocalBackupScreen(),
   ),
 ];
 
