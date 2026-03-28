@@ -26,6 +26,7 @@ import '../crud/message_template/list_message_template.dart';
 import '../crud/milestone/list_milestone_screen.dart';
 import '../crud/receipt/list_receipt_screen.dart';
 import '../crud/supplier/list_supplier_screen.dart';
+import '../crud/system/ai_settings_screen.dart';
 import '../crud/system/appearance_screen.dart';
 import '../crud/system/chatgpt_integration_screen.dart';
 import '../crud/system/ihserver_integration_screen.dart';
@@ -290,6 +291,10 @@ List<GoRoute> accountingRoutes() => [
 
 /// Setting Dashboard Route
 List<GoRoute> settingRoutes() => [
+  GoRoute(
+    path: 'ai',
+    builder: (_, _) => const AiSettingsScreen(),
+  ),
   GoRoute(
     path: 'appearance',
     builder: (_, _) =>
