@@ -233,6 +233,7 @@ class _EditJobCardState extends DeferredState<EditJobCard> {
     keyboardType: TextInputType.name,
   );
 
+<<<<<<< HEAD
   Widget _chooseStatus(Job? job) => Row(
     children: [
       Text(
