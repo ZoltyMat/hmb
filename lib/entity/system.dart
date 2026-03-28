@@ -125,6 +125,9 @@ class System extends Entity<System> {
   /// OpenAI API key for ChatGPT task/summary extraction.
   String? openaiApiKey;
 
+  /// OpenRouter API key for multi-model AI access.
+  String? openrouterApiKey;
+
   /// ihserver integration settings
   String? ihserverUrl;
   String? ihserverToken;
@@ -177,6 +180,7 @@ class System extends Entity<System> {
     required this.chatgptRefreshToken,
     required this.chatgptTokenExpiry,
     required this.openaiApiKey,
+    required this.openrouterApiKey,
     required this.ihserverUrl,
     required this.ihserverToken,
     required this.enableIhserverIntegration,
@@ -231,6 +235,7 @@ class System extends Entity<System> {
     this.chatgptRefreshToken,
     this.chatgptTokenExpiry,
     this.openaiApiKey,
+    this.openrouterApiKey,
     this.ihserverUrl,
     this.ihserverToken,
     this.enableIhserverIntegration = false,
@@ -280,6 +285,7 @@ class System extends Entity<System> {
     String? chatgptRefreshToken,
     DateTime? chatgptTokenExpiry,
     String? openaiApiKey,
+    String? openrouterApiKey,
     String? ihserverUrl,
     String? ihserverToken,
     bool? enableIhserverIntegration,
@@ -334,6 +340,7 @@ class System extends Entity<System> {
     chatgptRefreshToken: chatgptRefreshToken ?? this.chatgptRefreshToken,
     chatgptTokenExpiry: chatgptTokenExpiry ?? this.chatgptTokenExpiry,
     openaiApiKey: openaiApiKey ?? this.openaiApiKey,
+    openrouterApiKey: openrouterApiKey ?? this.openrouterApiKey,
     ihserverUrl: ihserverUrl ?? this.ihserverUrl,
     ihserverToken: ihserverToken ?? this.ihserverToken,
     enableIhserverIntegration:
@@ -410,6 +417,7 @@ class System extends Entity<System> {
         ? DateTime.parse(map['chatgpt_token_expiry'] as String)
         : null,
     openaiApiKey: map['openai_api_key'] as String?,
+    openrouterApiKey: map['openrouter_api_key'] as String?,
     ihserverUrl: map['ihserver_url'] as String?,
     ihserverToken: map['ihserver_token'] as String?,
     enableIhserverIntegration:
@@ -493,6 +501,7 @@ class System extends Entity<System> {
     'chatgpt_refresh_token': chatgptRefreshToken,
     'chatgpt_token_expiry': chatgptTokenExpiry?.toIso8601String(),
     'openai_api_key': openaiApiKey,
+    'openrouter_api_key': openrouterApiKey,
     'ihserver_url': ihserverUrl,
     'ihserver_token': ihserverToken,
     'enable_ihserver_integration': enableIhserverIntegration ? 1 : 0,

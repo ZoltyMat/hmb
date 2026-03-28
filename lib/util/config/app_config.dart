@@ -45,6 +45,13 @@ class AppConfig {
       // ignore: do_not_use_environment
       String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 
+  /// OpenRouter API key for multi-model AI access.
+  ///
+  /// Set via `--dart-define=OPENROUTER_API_KEY=...` at build time.
+  /// Can also be stored per-user in the System table (takes precedence).
+  // ignore: do_not_use_environment
+  static const openrouterApiKey = String.fromEnvironment('OPENROUTER_API_KEY');
+
   /// Whether Sentry is configured and should be active.
   static bool get isSentryEnabled => sentryDsn.isNotEmpty;
 }
