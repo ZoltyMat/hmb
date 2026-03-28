@@ -1,18 +1,18 @@
 /*
- Copyright © OnePub IP Pty Ltd. S. Brett Sutton.
+ Copyright (C) OnePub IP Pty Ltd. S. Brett Sutton.
  All Rights Reserved.
 
  Note: This software is licensed under the GNU General Public License,
          with the following exceptions:
-   • Permitted for internal use within your own business or organization only.
-   • Any external distribution, resale, or incorporation into products 
+   - Permitted for internal use within your own business or organization only.
+   - Any external distribution, resale, or incorporation into products
       for third parties is strictly prohibited.
 
  See the full license on GitHub:
  https://github.com/bsutton/hmb/blob/main/LICENSE
 */
 
-// Extracted editor card
+// Extracted editor card — redesigned with GroupedListSection (Phase 4C.2)
 import 'dart:async';
 import 'dart:io';
 
@@ -26,6 +26,10 @@ import 'package:path/path.dart' as p;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../dao/dao.g.dart';
+import '../../../design_system/molecules/grouped_list_section.dart';
+import '../../../design_system/tokens/colors.dart';
+import '../../../design_system/tokens/spacing.dart';
+import '../../../design_system/tokens/typography.dart';
 import '../../../entity/entity.g.dart';
 import '../../../entity/flutter_extensions/job_activity_status_ex.dart';
 import '../../../util/dart/date_time_ex.dart';
@@ -50,7 +54,6 @@ import '../../widgets/select/hmb_select_contact.dart';
 import '../../widgets/select/hmb_select_customer.dart';
 import '../../widgets/select/hmb_select_site.dart';
 import '../../widgets/text/hmb_expanding_text_block.dart';
-import '../../widgets/text/hmb_text.dart';
 import 'fsm_status_picker.dart';
 import 'list_job_screen.dart';
 
@@ -61,7 +64,7 @@ class EditJobCard extends StatefulWidget {
   // Controllers
   final TextEditingController summaryController;
   final TextEditingController descriptionController;
-  final TextEditingController notesController; // NEW
+  final TextEditingController notesController;
   final TextEditingController assumptionController;
   final TextEditingController hourlyRateController;
   final TextEditingController bookingFeeController;
@@ -69,7 +72,7 @@ class EditJobCard extends StatefulWidget {
   // Focus nodes
   final FocusNode summaryFocusNode;
   final FocusNode descriptionFocusNode;
-  final FocusNode notesFocusNode; // NEW
+  final FocusNode notesFocusNode;
   final FocusNode assumptionFocusNode;
   final FocusNode hourlyRateFocusNode;
   final FocusNode bookingFeeFocusNode;
@@ -83,13 +86,13 @@ class EditJobCard extends StatefulWidget {
     required this.customer,
     required this.summaryController,
     required this.descriptionController,
-    required this.notesController, // NEW
+    required this.notesController,
     required this.assumptionController,
     required this.hourlyRateController,
     required this.bookingFeeController,
     required this.summaryFocusNode,
     required this.descriptionFocusNode,
-    required this.notesFocusNode, // NEW
+    required this.notesFocusNode,
     required this.assumptionFocusNode,
     required this.hourlyRateFocusNode,
     required this.bookingFeeFocusNode,
@@ -105,7 +108,7 @@ class EditJobCard extends StatefulWidget {
 class _EditJobCardState extends DeferredState<EditJobCard> {
   // Version counters to force TextAreaEditors to refresh
   var _descriptionVersion = 0;
-  var _notesVersion = 0; // NEW
+  var _notesVersion = 0;
   var _assumptionVersion = 0;
 
   Job? job;
@@ -114,10 +117,24 @@ class _EditJobCardState extends DeferredState<EditJobCard> {
   String _partiesSummary = '';
   List<JobAttachment> _attachments = [];
 
+  // Collapsible section state
+  bool _detailsExpanded = true;
+  bool _billingExpanded = false;
+  bool _scheduleExpanded = false;
+  bool _notesExpanded = false;
+  bool _attachmentsExpanded = false;
+  bool _photosExpanded = false;
+
   @override
   void initState() {
     super.initState();
     job = widget.job;
+
+    // Auto-expand billing and schedule when editing an existing job.
+    if (widget.job != null) {
+      _scheduleExpanded = true;
+      _billingExpanded = true;
+    }
   }
 
   @override
@@ -154,32 +171,55 @@ class _EditJobCardState extends DeferredState<EditJobCard> {
   @override
   Widget build(BuildContext context) => DeferredBuilder(
     this,
-    builder: (context) => HMBColumn(
-      mainAxisSize: MainAxisSize.min,
+    builder: (context) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        HMBFormSection(
-          children: [
-            _showSummary(),
-            _buildPartiesSection(),
-            _chooseStatus(job),
-            if (job != null) _buildScheduleButtons(),
-            _chooseSite(),
-            _chooseBillingType(),
-            _showHourlyRate(),
-            _showBookingFee(),
-            _buildDescription(),
-            _buildNotes(),
-            _buildAssumption(),
-            if (job != null) _buildAttachments(),
-          ],
-        ),
-        if (job != null) PhotoGallery.forJob(job: job!),
+        const SizedBox(height: HmbSpacing.sm),
+        _buildDetailsSection(),
+        _buildPartiesSection(),
+        _buildBillingSection(),
+        if (job != null) _buildScheduleSection(),
+        _buildNotesSection(),
+        if (job != null) _buildAttachmentsSection(),
+        if (job != null) _buildPhotosSection(),
+        const SizedBox(height: HmbSpacing.xxl),
       ],
     ),
   );
 
-  // --- Field builders -------------------------------------------------------
+  // ===========================================================================
+  // DETAILS SECTION
+  // ===========================================================================
+
+  Widget _buildDetailsSection() => _CollapsibleGroupedSection(
+    header: 'Details',
+    expanded: _detailsExpanded,
+    onToggle: () => setState(() => _detailsExpanded = !_detailsExpanded),
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: _showSummary(),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: _chooseSite(),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: _chooseStatus(job),
+      ),
+    ],
+  );
 
   Widget _showSummary() => HMBTextField(
     key: const Key('jobSummary'),
@@ -190,6 +230,112 @@ class _EditJobCardState extends DeferredState<EditJobCard> {
     textCapitalization: TextCapitalization.sentences,
     required: true,
     keyboardType: TextInputType.name,
+  );
+
+  Widget _chooseStatus(Job? job) => Row(
+    children: [
+      Text(
+        'Status:',
+        style: HmbTypography.of(context).headline.copyWith(
+          color: HmbColors.of(context).label,
+        ),
+      ),
+      const SizedBox(width: HmbSpacing.sm),
+      JuneBuilder(
+        SelectJobStatus.new,
+        builder: (selectedJobStatus) => HMBChip(
+          label:
+              selectedJobStatus.jobStatus?.displayName ??
+              JobStatus.startingStatus.displayName,
+        ),
+      ),
+      const SizedBox(width: HmbSpacing.sm),
+      HMBButton(
+        enabled: job != null,
+        label: 'Update',
+        hint: 'Change job status',
+        onPressed: () async {
+          await showJobStatusDialog(context, job!);
+          setState(() {});
+        },
+      ),
+    ],
+  );
+
+  JuneBuilder<SelectedSite> _chooseSite() => JuneBuilder(
+    () => SelectedSite()..siteId = job?.siteId,
+    builder: (state) => HMBSelectSite(
+      key: ValueKey(state.siteId),
+      initialSite: state,
+      customer: widget.customer,
+      onSelected: (site) {
+        June.getState(SelectedSite.new).siteId = site?.id;
+      },
+    ),
+  );
+
+  // ===========================================================================
+  // PARTIES SECTION (collapsible ExpansionTile inside GroupedListSection)
+  // ===========================================================================
+
+  Widget _buildPartiesSection() => GroupedListSection(
+    header: 'Parties',
+    children: [
+      ExpansionTile(
+        title: Text(
+          _partiesSummary,
+          style: HmbTypography.of(context).subheadline.copyWith(
+            color: HmbColors.of(context).secondaryLabel,
+          ),
+        ),
+        childrenPadding: const EdgeInsets.symmetric(horizontal: 8),
+        children: [
+          _chooseCustomer(),
+          _chooseTenantContact(),
+          _chooseContact(),
+          _chooseBillingParty(),
+          if (June.getState(SelectedBillingParty.new).billingParty ==
+              BillingParty.referrer) ...[
+            _chooseReferrerCustomer(),
+            _chooseReferrerContact(),
+          ],
+          _chooseBillingContact(),
+        ],
+      ),
+    ],
+  );
+
+  // ===========================================================================
+  // BILLING SECTION
+  // ===========================================================================
+
+  Widget _buildBillingSection() => _CollapsibleGroupedSection(
+    header: 'Billing',
+    expanded: _billingExpanded,
+    onToggle: () => setState(() => _billingExpanded = !_billingExpanded),
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: _chooseBillingType(),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: _showHourlyRate(),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: _showBookingFee(),
+      ),
+    ],
   );
 
   Widget _chooseBillingType() =>
@@ -239,25 +385,405 @@ A once off fee applied to this Job.
 
 You can set a default booking fee from System | Billing screen''');
 
-  // --- Selectors ------------------------------------------------------------
+  // ===========================================================================
+  // SCHEDULE SECTION
+  // ===========================================================================
 
-  Widget _buildPartiesSection() => ExpansionTile(
-    title: const Text('Parties'),
-    subtitle: Text(_partiesSummary),
-    childrenPadding: const EdgeInsets.symmetric(horizontal: 8),
+  Widget _buildScheduleSection() => _CollapsibleGroupedSection(
+    header: 'Schedule',
+    expanded: _scheduleExpanded,
+    onToggle: () => setState(() => _scheduleExpanded = !_scheduleExpanded),
     children: [
-      _chooseCustomer(),
-      _chooseTenantContact(),
-      _chooseContact(),
-      _chooseBillingParty(),
-      if (June.getState(SelectedBillingParty.new).billingParty ==
-          BillingParty.referrer) ...[
-        _chooseReferrerCustomer(),
-        _chooseReferrerContact(),
-      ],
-      _chooseBillingContact(),
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: Row(
+          children: [
+            Expanded(child: _buildScheduleButton()),
+            const SizedBox(width: HmbSpacing.sm),
+            Expanded(child: _buildActivityButton()),
+          ],
+        ),
+      ),
     ],
   );
+
+  Widget _buildScheduleButton() => HMBButton(
+    label: 'Schedule',
+    hint: 'Schedule this Job',
+    onPressed: () async {
+      if ((await DaoSystem().get()).getOperatingHours().noOpenDays()) {
+        HMBToast.error(
+          'Before you Schedule a job, you must first set your '
+          "opening hours from the 'System | Business' page.",
+        );
+        return;
+      }
+      final jobId = job!.id;
+      final firstActivity = await _getFirstActivity(jobId);
+      if (!mounted) {
+        return;
+      }
+
+      await Navigator.of(context).push(
+        MaterialPageRoute<bool>(
+          builder: (_) => SchedulePage(
+            defaultView: ScheduleView.week,
+            initialActivityId: firstActivity?.id,
+            defaultJob: jobId,
+            dialogMode: true,
+          ),
+          fullscreenDialog: true,
+        ),
+      );
+
+      setAppTitle(JobListScreen.pageTitle);
+      June.getState(ActivityJobsState.new).setState();
+
+      await _checkIfScheduled();
+      setState(() {});
+    },
+  );
+
+  Future<void> _checkIfScheduled() async {
+    final tempJob = await DaoJob().getById(job?.id);
+    if (tempJob!.status == JobStatus.scheduled) {
+      June.getState(SelectJobStatus.new)
+        ..jobStatus = JobStatus.scheduled
+        ..setState();
+    }
+  }
+
+  Future<JobActivity?> _getFirstActivity(int jobId) async {
+    final now = DateTime.now();
+    final dao = DaoJobActivity();
+    final list = await dao.getByJob(jobId);
+    for (final e in list) {
+      if (e.start.isAfter(now)) {
+        return e;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildActivityButton() => JuneBuilder(
+    ActivityJobsState.new,
+    builder: (context) => FutureBuilderEx<List<JobActivity>>(
+      future: DaoJobActivity().getByJob(job!.id),
+      builder: (context, activities) {
+        final jobActivities = activities ?? [];
+        final nextActivity = _nextActivity(jobActivities);
+        final nextWhen = nextActivity == null
+            ? ''
+            : formatDateTimeAM(nextActivity.start);
+        return ElevatedButton(
+          onPressed: () async {
+            final selected = await _showActivityDialog(jobActivities);
+            if (!context.mounted || selected == null) {
+              return;
+            }
+
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => SchedulePage(
+                  defaultView: ScheduleView.week,
+                  initialActivityId: selected.id,
+                  defaultJob: job?.id,
+                  dialogMode: true,
+                ),
+                fullscreenDialog: true,
+              ),
+            );
+
+            setAppTitle(JobListScreen.pageTitle);
+            June.getState(ActivityJobsState.new).setState();
+            await _checkIfScheduled();
+          },
+          child: HMBRow(
+            children: [
+              if (nextActivity != null)
+                Circle(
+                    color: nextActivity.status.color, child: const Text('')),
+              Text(
+                'Next: $nextWhen',
+                style: TextStyle(
+                  color: nextActivity != null && _isToday(nextActivity.start)
+                      ? Colors.orangeAccent
+                      : Colors.white,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
+
+  Future<JobActivity?> _showActivityDialog(List<JobActivity> activities) {
+    final today = DateTime.now().withoutTime;
+    return showDialog<JobActivity>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Open an Activity'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () =>
+                Navigator.of(context).pop(_nextActivity(activities)),
+            child: Text('Next Activity: ${_nextActivityWhen(activities)}'),
+          ),
+          for (final a in activities)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(a),
+              child: HMBRow(
+                children: [
+                  Circle(color: a.status.color, child: const Text('')),
+                  Text(
+                    _activityDisplay(a),
+                    style: TextStyle(
+                      decoration: a.start.isBefore(today)
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _nextActivityWhen(List<JobActivity> activities) {
+    final next = _nextActivity(activities);
+    return next == null ? '' : formatDateTimeAM(next.start);
+  }
+
+  JobActivity? _nextActivity(List<JobActivity> list) {
+    final today = LocalDate.today();
+    for (final e in list) {
+      final ld = e.start.toLocalDate();
+      if (ld.isAfter(today) || ld == today) {
+        return e;
+      }
+    }
+    return null;
+  }
+
+  bool _isToday(DateTime dt) => dt.toLocalDate().isToday;
+
+  String _activityDisplay(JobActivity e) => formatDateTimeAM(e.start);
+
+  // ===========================================================================
+  // NOTES SECTION (Description, Internal Notes, Assumptions)
+  // ===========================================================================
+
+  Widget _buildNotesSection() => _CollapsibleGroupedSection(
+    header: 'Notes',
+    expanded: _notesExpanded,
+    onToggle: () => setState(() => _notesExpanded = !_notesExpanded),
+    children: [
+      _buildDescription(),
+      _buildNotes(),
+      _buildAssumption(),
+    ],
+  );
+
+  Widget _buildDescription() => _TextBlockRow(
+    label: 'Description',
+    text: widget.descriptionController.text,
+    version: _descriptionVersion,
+    onEdit: () async {
+      final text = await _showTextAreaEditDialog(
+        widget.descriptionController.text,
+        'Description',
+      );
+      if (text != null) {
+        widget.descriptionController.text = text;
+      }
+      setState(() => _descriptionVersion++);
+    },
+  );
+
+  Widget _buildNotes() => _TextBlockRow(
+    label: 'Internal Notes',
+    text: widget.notesController.text,
+    version: _notesVersion,
+    onEdit: () async {
+      final text = await _showTextAreaEditDialog(
+        widget.notesController.text,
+        'Notes',
+      );
+      if (text != null) {
+        widget.notesController.text = text;
+      }
+      setState(() => _notesVersion++);
+    },
+  );
+
+  Widget _buildAssumption() => _TextBlockRow(
+    label: 'Assumptions',
+    text: widget.assumptionController.text,
+    version: _assumptionVersion,
+    helpTitle: 'Assumptions',
+    helpBody: 'Detail the assumptions your pricing is based on. '
+        'Assumptions are shown on the Quote.',
+    onEdit: () async {
+      final text = await _showTextAreaEditDialog(
+        widget.assumptionController.text,
+        'Assumptions',
+      );
+      if (text != null) {
+        widget.assumptionController.text = text;
+      }
+      setState(() => _assumptionVersion++);
+    },
+  );
+
+  // ===========================================================================
+  // ATTACHMENTS SECTION
+  // ===========================================================================
+
+  Widget _buildAttachmentsSection() {
+    final colors = HmbColors.of(context);
+
+    return _CollapsibleGroupedSection(
+      header: 'Attachments',
+      trailing: HMBButton.small(
+        label: 'Add File',
+        hint: 'Attach an existing file to this job.',
+        onPressed: () async {
+          await _pickAndAttachFile();
+        },
+      ),
+      expanded: _attachmentsExpanded,
+      onToggle: () =>
+          setState(() => _attachmentsExpanded = !_attachmentsExpanded),
+      children: [
+        if (_attachments.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: HmbSpacing.lg,
+              vertical: HmbSpacing.md,
+            ),
+            child: Text(
+              'No attachments',
+              style: HmbTypography.of(context).body.copyWith(
+                color: colors.tertiaryLabel,
+              ),
+            ),
+          )
+        else
+          ..._attachments.map(
+            (attachment) => Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: HmbSpacing.lg,
+                vertical: HmbSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.attach_file,
+                    size: 18,
+                    color: colors.secondaryLabel,
+                  ),
+                  const SizedBox(width: HmbSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      attachment.displayName,
+                      overflow: TextOverflow.ellipsis,
+                      style: HmbTypography.of(context).body.copyWith(
+                        color: colors.label,
+                      ),
+                    ),
+                  ),
+                  HMBButton.small(
+                    label: 'Open',
+                    hint: 'Open this attachment in an external app.',
+                    onPressed: () async {
+                      await _openAttachment(attachment);
+                    },
+                  ),
+                  HMBButton.small(
+                    label: 'Remove',
+                    hint: 'Remove this attachment from the job.',
+                    onPressed: () async {
+                      await DaoJobAttachment().delete(attachment.id);
+                      _attachments =
+                          await DaoJobAttachment().getByJob(job!.id);
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _pickAndAttachFile() async {
+    if (job == null) {
+      return;
+    }
+
+    String? selectedFilePath;
+    if (Platform.isLinux) {
+      selectedFilePath = await HMBFilePickerDialog().show(context);
+    } else {
+      final result = await FilePicker.platform.pickFiles();
+      selectedFilePath = result?.files.single.path;
+    }
+
+    if (selectedFilePath == null) {
+      return;
+    }
+
+    final attachment = JobAttachment.forInsert(
+      jobId: job!.id,
+      filePath: selectedFilePath,
+      displayName: p.basename(selectedFilePath),
+    );
+
+    await DaoJobAttachment().insert(attachment);
+    if (mounted) {
+      _attachments = await DaoJobAttachment().getByJob(job!.id);
+      setState(() {});
+    }
+  }
+
+  Future<void> _openAttachment(JobAttachment attachment) async {
+    final uri = Uri.file(attachment.filePath);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      HMBToast.error('Unable to open attachment.');
+    }
+  }
+
+  // ===========================================================================
+  // PHOTOS SECTION
+  // ===========================================================================
+
+  Widget _buildPhotosSection() => _CollapsibleGroupedSection(
+    header: 'Photos',
+    expanded: _photosExpanded,
+    onToggle: () => setState(() => _photosExpanded = !_photosExpanded),
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HmbSpacing.lg,
+          vertical: HmbSpacing.sm,
+        ),
+        child: PhotoGallery.forJob(job: job!),
+      ),
+    ],
+  );
+
+  // ===========================================================================
+  // PARTIES HELPERS (unchanged logic)
+  // ===========================================================================
 
   Future<String> _buildPartiesSummary() async {
     final selectedCustomerId = June.getState(SelectedCustomer.new).customerId;
@@ -372,18 +898,6 @@ You can set a default booking fee from System | Billing screen''');
     return '$fullName (${contact.emailAddress})';
   }
 
-  JuneBuilder<SelectedSite> _chooseSite() => JuneBuilder(
-    () => SelectedSite()..siteId = job?.siteId,
-    builder: (state) => HMBSelectSite(
-      key: ValueKey(state.siteId),
-      initialSite: state,
-      customer: widget.customer,
-      onSelected: (site) {
-        June.getState(SelectedSite.new).siteId = site?.id;
-      },
-    ),
-  );
-
   Widget _chooseCustomer() => HMBSelectCustomer(
     required: true,
     selectedCustomer: June.getState(SelectedCustomer.new),
@@ -486,418 +1000,9 @@ You can set a default booking fee from System | Billing screen''');
     },
   );
 
-  Widget _chooseStatus(Job? job) => Padding(
-    padding: const EdgeInsets.only(top: 8, bottom: 8),
-    child: HMBRow(
-      children: [
-        const Text('Status:', style: TextStyle(fontWeight: FontWeight.bold)),
-        JuneBuilder(
-          SelectJobStatus.new,
-          builder: (selectedJobStatus) => HMBChip(
-            label:
-                selectedJobStatus.jobStatus?.displayName ??
-                JobStatus.startingStatus.displayName,
-          ),
-        ),
-        HMBButton(
-          enabled: job != null,
-          label: 'Update',
-          hint: 'Change job status',
-          onPressed: () async {
-            await showJobStatusDialog(context, job!);
-            setState(() {});
-          },
-        ),
-      ],
-    ),
-  );
-  // Alternative dropdown version kept for reference:
-  // Widget _chooseStatus(Job? job) => JuneBuilder(
-  //   () => SelectJobStatus()..jobStatus = job?.status,
-  //   builder: (jobStatus) => HMBDroplist<JobStatus>(
-  //     title: 'Status',
-  //     items: (filter) async => JobStatus.byOrdinal(),
-  //     selectedItem: () async => jobStatus.jobStatus,
-  //     onChanged: (status) => jobStatus.jobStatus = status,
-  //     format: (value) => value.displayName,
-  //   ),
-  // );
-
-  // --- Schedule / Activities -----------------------------------------------
-
-  Widget _buildScheduleButtons() => Padding(
-    padding: const EdgeInsets.only(top: 16, bottom: 8),
-    child: Row(
-      children: [
-        _buildScheduleButton(),
-        const HMBSpacer(width: true),
-        _buildActivityButton(),
-      ],
-    ),
-  );
-
-  Widget _buildScheduleButton() => HMBButton(
-    label: 'Schedule',
-    hint: 'Schedule this Job',
-    onPressed: () async {
-      if ((await DaoSystem().get()).getOperatingHours().noOpenDays()) {
-        HMBToast.error(
-          'Before you Schedule a job, you must first set your '
-          "opening hours from the 'System | Business' page.",
-        );
-        return;
-      }
-      final jobId = job!.id;
-      final firstActivity = await _getFirstActivity(jobId);
-      if (!mounted) {
-        return;
-      }
-
-      await Navigator.of(context).push(
-        MaterialPageRoute<bool>(
-          builder: (_) => SchedulePage(
-            defaultView: ScheduleView.week,
-            initialActivityId: firstActivity?.id,
-            defaultJob: jobId,
-            dialogMode: true,
-          ),
-          fullscreenDialog: true,
-        ),
-      );
-
-      setAppTitle(JobListScreen.pageTitle);
-      June.getState(ActivityJobsState.new).setState();
-
-      await _checkIfScheduled();
-      setState(() {});
-    },
-  );
-
-  Future<void> _checkIfScheduled() async {
-    // reload the job as it's state may have changed
-    final tempJob = await DaoJob().getById(job?.id);
-    if (tempJob!.status == JobStatus.scheduled) {
-      June.getState(SelectJobStatus.new)
-        ..jobStatus = JobStatus.scheduled
-        ..setState();
-    }
-  }
-
-  Future<JobActivity?> _getFirstActivity(int jobId) async {
-    final now = DateTime.now();
-    final dao = DaoJobActivity();
-    final list = await dao.getByJob(jobId);
-    for (final e in list) {
-      if (e.start.isAfter(now)) {
-        return e;
-      }
-    }
-    return null;
-  }
-
-  Widget _buildActivityButton() => JuneBuilder(
-    ActivityJobsState.new,
-    builder: (context) => FutureBuilderEx<List<JobActivity>>(
-      future: DaoJobActivity().getByJob(job!.id),
-      builder: (context, activities) {
-        final jobActivities = activities ?? [];
-        final nextActivity = _nextActivity(jobActivities);
-        final nextWhen = nextActivity == null
-            ? ''
-            : formatDateTimeAM(nextActivity.start);
-        return ElevatedButton(
-          onPressed: () async {
-            final selected = await _showActivityDialog(jobActivities);
-            if (!context.mounted || selected == null) {
-              return;
-            }
-
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => SchedulePage(
-                  defaultView: ScheduleView.week,
-                  initialActivityId: selected.id,
-                  defaultJob: job?.id,
-                  dialogMode: true,
-                ),
-                fullscreenDialog: true,
-              ),
-            );
-
-            setAppTitle(JobListScreen.pageTitle);
-            June.getState(ActivityJobsState.new).setState();
-            await _checkIfScheduled();
-          },
-          child: HMBRow(
-            children: [
-              if (nextActivity != null)
-                Circle(color: nextActivity.status.color, child: const Text('')),
-              Text(
-                'Next: $nextWhen',
-                style: TextStyle(
-                  color: nextActivity != null && _isToday(nextActivity.start)
-                      ? Colors.orangeAccent
-                      : Colors.white,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-
-  Future<JobActivity?> _showActivityDialog(List<JobActivity> activities) {
-    final today = DateTime.now().withoutTime;
-    return showDialog<JobActivity>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Open an Activity'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () =>
-                Navigator.of(context).pop(_nextActivity(activities)),
-            child: Text('Next Activity: ${_nextActivityWhen(activities)}'),
-          ),
-          for (final a in activities)
-            SimpleDialogOption(
-              onPressed: () => Navigator.of(context).pop(a),
-              child: HMBRow(
-                children: [
-                  Circle(color: a.status.color, child: const Text('')),
-                  Text(
-                    _activityDisplay(a),
-                    style: TextStyle(
-                      decoration: a.start.isBefore(today)
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  String _nextActivityWhen(List<JobActivity> activities) {
-    final next = _nextActivity(activities);
-    return next == null ? '' : formatDateTimeAM(next.start);
-  }
-
-  JobActivity? _nextActivity(List<JobActivity> list) {
-    final today = LocalDate.today();
-    for (final e in list) {
-      final ld = e.start.toLocalDate();
-      if (ld.isAfter(today) || ld == today) {
-        return e;
-      }
-    }
-    return null;
-  }
-
-  bool _isToday(DateTime dt) => dt.toLocalDate().isToday;
-
-  String _activityDisplay(JobActivity e) => formatDateTimeAM(e.start);
-
-  // --- Description / Notes / Assumptions -----------------------------------
-
-  Widget _buildDescription() => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: HMBColumn(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const HMBText('Description:', bold: true),
-            Container(
-              constraints: const BoxConstraints(minHeight: 200),
-              child: HMBExpandingTextBlock(
-                widget.descriptionController.text,
-                key: ValueKey(_descriptionVersion),
-              ),
-            ),
-          ],
-        ),
-      ),
-      HMBEditIcon(
-        onPressed: () async {
-          final text = await _showTextAreaEditDialog(
-            widget.descriptionController.text,
-            'Description',
-          );
-          if (text != null) {
-            widget.descriptionController.text = text;
-          }
-          setState(() => _descriptionVersion++);
-        },
-        hint: 'Edit Description',
-      ),
-    ],
-  );
-
-  Widget _buildNotes() => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: HMBColumn(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const HMBText('Internal Notes:', bold: true),
-            Container(
-              constraints: const BoxConstraints(minHeight: 200),
-              child: HMBExpandingTextBlock(
-                widget.notesController.text,
-                key: ValueKey(_notesVersion),
-              ),
-            ),
-          ],
-        ),
-      ),
-      HMBEditIcon(
-        onPressed: () async {
-          final text = await _showTextAreaEditDialog(
-            widget.notesController.text,
-            'Notes',
-          );
-          if (text != null) {
-            widget.notesController.text = text;
-          }
-          setState(() => _notesVersion++);
-        },
-        hint: 'Edit Notes',
-      ),
-    ],
-  );
-
-  Widget _buildAssumption() => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: HMBColumn(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const HMBText('Assumption:', bold: true).help(
-              'Assumptions',
-              'Detail the assumptions your pricing is based on. '
-                  'Assumptions are shown on the Quote. ',
-            ),
-            Container(
-              constraints: const BoxConstraints(minHeight: 200),
-              child: HMBExpandingTextBlock(
-                widget.assumptionController.text,
-                key: ValueKey(_assumptionVersion),
-              ),
-            ),
-          ],
-        ),
-      ),
-      HMBEditIcon(
-        onPressed: () async {
-          final text = await _showTextAreaEditDialog(
-            widget.assumptionController.text,
-            'Assumptions',
-          );
-
-          if (text != null) {
-            widget.assumptionController.text = text;
-          }
-          setState(() => _assumptionVersion++);
-        },
-        hint: 'Edit Assumptions',
-      ),
-    ],
-  );
-
-  Widget _buildAttachments() => HMBColumn(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const HMBText('Attachments:', bold: true),
-          HMBButton.small(
-            label: 'Add File',
-            hint: 'Attach an existing file to this job.',
-            onPressed: () async {
-              await _pickAndAttachFile();
-            },
-          ),
-        ],
-      ),
-      if (_attachments.isEmpty)
-        const Text('No attachments')
-      else
-        ..._attachments.map(
-          (attachment) => Row(
-            children: [
-              Expanded(
-                child: Text(
-                  attachment.displayName,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              HMBButton.small(
-                label: 'Open',
-                hint: 'Open this attachment in an external app.',
-                onPressed: () async {
-                  await _openAttachment(attachment);
-                },
-              ),
-              HMBButton.small(
-                label: 'Remove',
-                hint: 'Remove this attachment from the job.',
-                onPressed: () async {
-                  await DaoJobAttachment().delete(attachment.id);
-                  _attachments = await DaoJobAttachment().getByJob(job!.id);
-                  if (mounted) {
-                    setState(() {});
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-    ],
-  );
-
-  Future<void> _pickAndAttachFile() async {
-    if (job == null) {
-      return;
-    }
-
-    String? selectedFilePath;
-    if (Platform.isLinux) {
-      selectedFilePath = await HMBFilePickerDialog().show(context);
-    } else {
-      final result = await FilePicker.platform.pickFiles();
-      selectedFilePath = result?.files.single.path;
-    }
-
-    if (selectedFilePath == null) {
-      return;
-    }
-
-    final attachment = JobAttachment.forInsert(
-      jobId: job!.id,
-      filePath: selectedFilePath,
-      displayName: p.basename(selectedFilePath),
-    );
-
-    await DaoJobAttachment().insert(attachment);
-    if (mounted) {
-      _attachments = await DaoJobAttachment().getByJob(job!.id);
-      setState(() {});
-    }
-  }
-
-  Future<void> _openAttachment(JobAttachment attachment) async {
-    final uri = Uri.file(attachment.filePath);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      HMBToast.error('Unable to open attachment.');
-    }
-  }
+  // ===========================================================================
+  // TEXT AREA EDIT DIALOG
+  // ===========================================================================
 
   Future<String?> _showTextAreaEditDialog(String text, String title) {
     final localController = TextEditingController(text: text);
@@ -942,6 +1047,172 @@ You can set a default booking fee from System | Billing screen''');
     );
   }
 }
+
+// =============================================================================
+// HELPER WIDGETS
+// =============================================================================
+
+/// A collapsible wrapper around [GroupedListSection] with a tap-to-toggle
+/// header chevron. Preserves the iOS Settings visual style while adding
+/// expandable behaviour.
+class _CollapsibleGroupedSection extends StatelessWidget {
+  final String header;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final List<Widget> children;
+  final Widget? trailing;
+
+  const _CollapsibleGroupedSection({
+    required this.header,
+    required this.expanded,
+    required this.onToggle,
+    required this.children,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = HmbColors.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Tappable header row
+        GestureDetector(
+          onTap: onToggle,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: 32,
+              right: 32,
+              top: 24,
+              bottom: 6,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    header.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: colors.secondaryLabel,
+                      letterSpacing: -0.08,
+                    ),
+                  ),
+                ),
+                if (trailing != null) trailing!,
+                const SizedBox(width: 4),
+                AnimatedRotation(
+                  turns: expanded ? 0.25 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: colors.tertiaryLabel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Animated collapsible body
+        AnimatedCrossFade(
+          firstChild: GroupedListSection(children: children),
+          secondChild: const SizedBox.shrink(),
+          crossFadeState:
+              expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 250),
+        ),
+      ],
+    );
+  }
+}
+
+/// A row showing a text block label with an edit icon, used inside the
+/// Notes section for Description, Internal Notes, and Assumptions.
+class _TextBlockRow extends StatelessWidget {
+  final String label;
+  final String text;
+  final int version;
+  final Future<void> Function() onEdit;
+  final String? helpTitle;
+  final String? helpBody;
+
+  const _TextBlockRow({
+    required this.label,
+    required this.text,
+    required this.version,
+    required this.onEdit,
+    this.helpTitle,
+    this.helpBody,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = HmbColors.of(context);
+    final typography = HmbTypography.of(context);
+
+    Widget labelWidget = Padding(
+      padding: const EdgeInsets.only(
+        left: HmbSpacing.lg,
+        right: HmbSpacing.lg,
+        top: HmbSpacing.md,
+      ),
+      child: Text(
+        label,
+        style: typography.headline.copyWith(color: colors.label),
+      ),
+    );
+
+    if (helpTitle != null && helpBody != null) {
+      labelWidget = Row(
+        children: [
+          labelWidget,
+          const Spacer(),
+          HelpButton.text(
+            tooltip: helpTitle!,
+            dialogTitle: helpTitle!,
+            helpText: helpBody,
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: labelWidget),
+            Padding(
+              padding: const EdgeInsets.only(
+                right: HmbSpacing.sm,
+                top: HmbSpacing.sm,
+              ),
+              child: HMBEditIcon(onPressed: onEdit, hint: 'Edit $label'),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: HmbSpacing.lg,
+            vertical: HmbSpacing.sm,
+          ),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 60),
+            child: HMBExpandingTextBlock(text, key: ValueKey(version)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// JUNE STATE OBJECTS (unchanged -- kept at bottom of file)
+// =============================================================================
 
 /// State object to persist the selected billing contact ID across this screen.
 class JobBillingContact extends JuneState {
